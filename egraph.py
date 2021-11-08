@@ -36,7 +36,7 @@ class ENode(NamedTuple):
     #    pass
     
     def canonicalize(self):
-        print("Canonize node: ", self.key, ", Canonize args: ", self.args)
+        #print("Canonize node: ", self.key, ", Canonize args: ", self.args)
         return ENode(self.key, tuple(arg.find() for arg in self.args))
 
 
@@ -53,7 +53,7 @@ class EGraph:
         self.hashcons = {}
 
         # List<EClassID> of eclasses mutated by a merge, used for `rebuild`
-        self.updated = []
+        self.worklist = []
     
     """def _repr_svg_(self):
         def format_record(x):
@@ -118,18 +118,18 @@ class EGraph:
         e2.uses += e1.uses
         e1.uses = None  # TODO: should be [] instead?
 
-        # now that eclassid e2 is updated, nodes in the hashcons may not be
+        # now that eclassid e2 is worklist, nodes in the hashcons may not be
         # canonicalized, and we might discover that 2 enodes are actually the
-        # same value. We use `repair` to fix this and track in the `updated`
+        # same value. We use `repair` to fix this and track in the `worklist`
         # list.
-        self.updated.append(e2)
+        self.worklist.append(e2)
 
     # Ensure we have a de-duplicated version of the EGraph    
     def rebuild(self):
-        while self.updated:
+        while self.worklist:
             # de-duplicate repeated calls to repair the same EClass
-            todo = { eid.find(): None for eid in self.updated }
-            self.updated = []
+            todo = set(eid.find() for eid in self.worklist)
+            self.worklist = []
             for eclassid in todo:
                 self.repair(eclassid)
     
