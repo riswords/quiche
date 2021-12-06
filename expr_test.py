@@ -4,7 +4,7 @@ import math
 from egraph import *
 #from rewrite import Rule
 
-class ExprNode(NamedTuple):
+class ExprNode(ENode):
     key: 'Either[str, int]' # use int to represent int literals,
     args: 'Tuple[ExprNode,...]'
 
@@ -23,85 +23,6 @@ class ExprNode(NamedTuple):
             return f'({self.key} {" ".join(str(arg) for arg in self.args)})'
         else:
             return str(self.key)
-
-# Env = Dict[str, EClassID] # type alias
-def ematch(eclasses: Dict[EClassID, List[ENode]], pattern: ExprNode):
-    """
-    :param eclasses: Dict[EClassID, List[ENode]]
-    :param pattern: ExprNode
-    :returns: List[Tuple[EClassID, Env]]
-    """
-    def match_in(p: ExprNode, eid: EClassID, env: 'Env'):
-        """
-        :returns: Tuple[Bool, Env]
-        """
-        def enode_matches(p: ExprNode, e:ENode, env: 'Env'):
-            """
-            :returns: Tuple[Bool, Env]
-            """
-            if enode.key != p.key:
-                return False, env
-            new_env = env
-            for arg_pattern, arg_eid in zip(p.args, enode.args):
-                matched, new_env = match_in(arg_pattern, arg_eid, new_env)
-                if not matched:
-                    return False, env
-            return True, new_env
-        if not p.args and not isinstance(p.key, int):
-            # this is a leaf variable like x: match it with the env
-            id = p.key
-            if id not in env:
-                env = {**env} # expensive, but can be optimized (?)
-                env[id] = eid
-                return True, env
-            else:
-                # check that this value matches the same thing (?)
-                return env[id] is eid, env
-        else:
-            # does one of the ways to define this class match the pattern?
-            for enode in eclasses[eid]:
-                matches, new_env = enode_matches(p, enode, env)
-                if matches:
-                    return True, new_env
-            return False, env
-        
-    matches = []
-    for eid in eclasses.keys():
-        match, env = match_in(pattern, eid, {})
-        if match:
-            matches.append((eid, env))
-    return matches
-
-def subst(eg: EGraph, pattern: ExprNode, env: Dict[str, EClassID]):
-    """
-    :param pattern: ExprNode
-    :param env: Dict[str, EClassID]
-    :returns: EClassID
-    """
-    if not pattern.args and not isinstance(pattern.key, int):
-        return env[pattern.key]
-    else:
-        enode = ENode(pattern.key, tuple(subst(eg, arg, env) for arg in pattern.args))
-        return eg.add(enode)
-
-def apply_rules(eg: EGraph, rules: List['Rule']):
-    """
-    :param rules: List[Rule]
-    :returns: EGraph
-    """
-    eclasses = eg.eclasses()
-    matches = []
-    for rule in rules:
-        for eid, env in ematch(eclasses, rule.lhs):
-            matches.append((rule, eid, env))
-    print(f'VERSION {eg.version}')
-    for rule, eid, env in matches:
-        new_eid = subst(eg, rule.rhs, env)
-        if eid is not new_eid:
-            print(f'{eid} MATCHED {rule} with {env}')
-        eg.merge(eid, new_eid)
-    eg.rebuild()
-    return eg
 
 expr_costs = {
       '+': 1

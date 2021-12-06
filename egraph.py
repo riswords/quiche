@@ -1,5 +1,5 @@
-from typing import NamedTuple, Optional, Tuple
-from graphviz import Digraph
+from typing import NamedTuple, Optional, Tuple, TypeVar, Generic, Dict, List
+#from rewrite import Rule
 
 class EClassID:
     def __init__(self, id, parent: 'EClassID' = None):
@@ -39,8 +39,6 @@ class ENode(NamedTuple):
         #print("Canonize node: ", self.key, ", Canonize args: ", self.args)
         return ENode(self.key, tuple(arg.find() for arg in self.args))
 
-
-
 class EGraph:
     def __init__(self):
         self.id_counter = 0
@@ -54,39 +52,58 @@ class EGraph:
 
         # List<EClassID> of eclasses mutated by a merge, used for `rebuild`
         self.worklist = []
-    
-    """def _repr_svg_(self):
-        def format_record(x):
-            if isinstance(x, list):
-                return '{' + '|'.join(format_record(e) for e in x) + '}'
-            else:
-                return x
-        
-        def escape(x):
-            return str(x).replace('<', '\<').replace('>', '\>')
-        
-        g = Digraph(node_attr={'shape': 'record', 'height': '.1'})
-        for eclass, enodes in self.eclasses().items():
-            g.node(f'{eclass.id}', label=f'e{eclass.id}', shape='circle')
-
-            for enode in enodes:
-                enode_id = str(id(enode))
-                g.edge(f'{eclass.id}', enode_id)
-
-                record = [escape(enode.key)]
-                for i, arg in enumerate(enode.args):
-                    g.edge(f'{enode_id}:p{i}', f'{arg.id}')
-                    record.append(f'<p{i}>')
-                g.node(enode_id, label='|'.join(record))
-        
-        return g._repr_svg_()"""
 
     def is_saturated_or_timeout(self):
         pass
     
-    def ematch(self, lhs):
-        pass
-    
+    def ematch(self, pattern: ENode):
+        # Env = Dict[str, EClassID] # type alias
+        """
+        :param pattern: ENode
+        :returns: List[Tuple[EClassID, Env]]
+        """
+        canoncial_eclasses = self.eclasses()
+        def match_in(p: ENode, eid: EClassID, env: 'Env'):
+            """
+            :returns: Tuple[Bool, Env]
+            """
+            def enode_matches(p: ENode, e:ENode, env: 'Env'):
+                """
+                :returns: Tuple[Bool, Env]
+                """
+                if enode.key != p.key:
+                    return False, env
+                new_env = env
+                for arg_pattern, arg_eid in zip(p.args, enode.args):
+                    matched, new_env = match_in(arg_pattern, arg_eid, new_env)
+                    if not matched:
+                        return False, env
+                return True, new_env
+            if not p.args and not isinstance(p.key, int):
+                # this is a leaf variable like x: match it with the env
+                id = p.key
+                if id not in env:
+                    env = {**env} # expensive, but can be optimized (?)
+                    env[id] = eid
+                    return True, env
+                else:
+                    # check that this value matches the same thing (?)
+                    return env[id] is eid, env
+            else:
+                # does one of the ways to define this class match the pattern?
+                for enode in canoncial_eclasses[eid]:
+                    matches, new_env = enode_matches(p, enode, env)
+                    if matches:
+                        return True, new_env
+                return False, env
+
+        matches = []
+        for eid in canoncial_eclasses.keys():
+            match, env = match_in(pattern, eid, {})
+            if match:
+                matches.append((eid, env))
+        return matches
+
     def _new_singleton_eclass(self):
         singleton = EClassID(self.id_counter)
         self.id_counter += 1
@@ -161,6 +178,25 @@ class EGraph:
         # be tied to the parent instead
         eclassid.find().uses += new_uses.items()
     
+    # TODO: fix circular dependency so that we can properly import rule
+    def apply_rules(self, rules: List['Rule']):
+        """
+        :param rules: List[Rule]
+        :returns: EGraph
+        """
+        canoncial_eclasses = self.eclasses()
+        matches = []
+        for rule in rules:
+            for eid, env in self.ematch(rule.lhs):
+                matches.append((rule, eid, env))
+        print(f'VERSION {self.version}')
+        for rule, eid, env in matches:
+            new_eid = self.subst(rule.rhs, env)
+            if eid is not new_eid:
+                print(f'{eid} MATCHED {rule} with {env}')
+            self.merge(eid, new_eid)
+        self.rebuild()
+        return self
     
     def extract_best(self):
         pass
@@ -180,5 +216,14 @@ class EGraph:
                 result[eid].append(enode)
         return result
     
-    #def add_expr_node(self, node: 'ExprNode'):
-    #    return self.add(ENode(node.key, tuple(self.add_expr_node(n) for n in node.args)))
+    def subst(self, pattern: ENode, env: Dict[str, EClassID]):
+        """
+        :param pattern: ENode
+        :param env: Dict[str, EClassID]
+        :returns: EClassID
+        """
+        if not pattern.args and not isinstance(pattern.key, int):
+            return env[pattern.key]
+        else:
+            enode = ENode(pattern.key, tuple(self.subst(arg, env) for arg in pattern.args))
+            return self.add(enode)
