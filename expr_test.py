@@ -64,6 +64,9 @@ class ExprNodeCost:
                        costs: Dict[EClassID, Tuple[int, ExprNode]]) -> int:
         """
         Calculate the cost of a node based on its key and its children
+
+        :param enode: the node to calculate the cost of
+        :param costs: dictionary containing costs of children
         """
         return self.enode_cost(enode, costs) + \
             sum(costs[eid][0] for eid in enode.args)
