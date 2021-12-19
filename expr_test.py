@@ -4,6 +4,7 @@ import math
 from egraph import *
 #from rewrite import Rule
 
+
 class ExprNode(ENode):
     key: 'Either[str, int]' # use int to represent int literals,
     args: 'Tuple[ExprNode,...]'
@@ -24,39 +25,72 @@ class ExprNode(ENode):
         else:
             return str(self.key)
 
-expr_costs = {
-      '+': 1
-    , '<<': 1
-    , '*': 2
-    , '/': 3    
-}
 
-def schedule(eg: EGraph, result: EClassID):
+class ExprNodeCost:
     """
-    Extract lowest cost expression from EGraph.
-    Calculate lowest cost for each node using `expr_costs` to weight each operation.
-    :returns: ExprNode for the expression with the lowest cost
-    """
-    result = result.find()
-    eclasses = eg.eclasses()
-    # costs is Dict[EClassID, Tuple[int, ENode]]
-    costs = {eid: (math.inf, None) for eid in eclasses.keys()}
-    changed = True
+    Simple cost model for ExprNodes:
 
-    def enode_cost(enode: ENode):
-        return expr_costs.get(enode.key, 0) + sum(costs[eid][0] for eid in enode.args)
+    +, << cost 1
+    * costs 2
+    / costs 3
+    """
+    def __init__(self):
+        self.expr_costs = {
+            '+': 1,
+            '<<': 1,
+            '*': 2,
+            '/': 3,
+        }
+
+
+    def enode_cost(self, node: ExprNode, costs: Dict[EClassID, int]) -> int:
+        """
+        Calculate the cost of a node based solely on its key (not its children)
+        """
+        if node.key == '+' or node.key == '<<':
+            return 1
+        elif node.key == '*':
+            return 2
+        elif node.key == '/':
+            return 3
+        else:
+            return 0
+
+
+    def enode_cost_rec(self, enode: ExprNode, costs: Dict[EClassID, Tuple[int, ExprNode]]) -> int:
+        """
+        Calculate the cost of a node based on its key and its children
+        """
+        return self.enode_cost(enode, costs) + sum(costs[eid][0] for eid in enode.args)
+
+
+    def extract(self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ExprNode]]) -> ExprNode:
+        enode = costs[eclassid][1]
+        return ExprNode(enode.key, tuple(self.extract(eid, costs) for eid in enode.args))
+
+
+class ExprNodeExtractor:
+    def __init__(self, cost_model: ExprNodeCost):
+        self.cost_model = cost_model
     
-    # iterate until saturation, taking lowest cost option
-    while changed:
-        changed = False
-        for eclass, enodes in eclasses.items():
-            new_cost = min((enode_cost(enode), enode) for enode in enodes)
-            if costs[eclass][0] != new_cost[0]:
-                changed = True
-            costs[eclass] = new_cost
-    
-    def extract(eid):
-        enode = costs[eid][1]
-        return ExprNode(enode.key, tuple(extract(arg) for arg in enode.args))
-    
-    return extract(result)
+    def schedule(self, egraph: EGraph, result: EClassID) -> ExprNode:
+        """
+        Extract lowest cost ENode from EGraph.
+        Calculate lowest cost for each node using `expr_costs` to weight each operation.
+        :returns: lowest cost node
+        """
+        result = result.find()
+        eclasses = egraph.eclasses()
+        costs = {eid: (math.inf, None) for eid in eclasses.keys()}
+        changed = True
+
+        # iterate until saturation, taking lowest cost option
+        while changed:
+            changed = False
+            for eclass, enodes in eclasses.items():
+                new_cost = min((self.cost_model.enode_cost_rec(enode, costs), enode) for enode in enodes)
+                if costs[eclass][0] != new_cost[0]:
+                    changed = True
+                costs[eclass] = new_cost
+
+        return self.cost_model.extract(result, costs)

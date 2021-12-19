@@ -186,11 +186,13 @@ def test_schedule():
     for version, term in zip(versions, best_terms):
         assert actual.version == version
         # Verify schedule-extracted term is correct
-        extracted = schedule(actual, root)
+        cost_model = ExprNodeCost()
+        cost_analysis = ExprNodeExtractor(cost_model)
+        extracted = cost_analysis.schedule(actual, root)
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(schedule(actual, root)) == best_terms[-1]
+    assert str(cost_analysis.schedule(actual, root)) == best_terms[-1]
     expected = {
         'e0': { 'a': [],
                 '/': ['e5', 'e1'],
