@@ -1,5 +1,7 @@
-from typing import NamedTuple, Optional, Tuple, TypeVar, Generic, Dict, List
-#from rewrite import Rule
+from typing import NamedTuple, Tuple, Dict, List
+# TODO: fix circular dependency so that we can properly import rule
+# from rewrite import Rule
+
 
 class EClassID:
     def __init__(self, id, parent: 'EClassID' = None):
@@ -11,33 +13,35 @@ class EClassID:
         # Only set on a canonical EClass (parent == None) and is used in
         # `EGraph.rebuild()`
         self.uses = []
-    
+
     def __repr__(self):
         return f'e{self.id}'
-    
+
     def find(self):
         if self.parent is None:
             return self
         top = self.parent.find()
-        self.parent = top # caching top
+        self.parent = top  # caching top
         return top
+
 
 class ENode(NamedTuple):
     key: str
     args: Tuple[EClassID, ...]
-    #
-    #def __init__(self, key, args):
+
+    # def __init__(self, key, args):
     #    print('Creating enode ', key, ' with args: ', args)
     #    self.key = key
     #    self.args = args # EClassIDs?
-    
-    #def apply_substitution(self, subst) -> 'ENode':
+
+    # def apply_substitution(self, subst) -> 'ENode':
     #    # returns ENode
     #    pass
-    
+
     def canonicalize(self):
-        #print("Canonize node: ", self.key, ", Canonize args: ", self.args)
+        # print("Canonize node: ", self.key, ", Canonize args: ", self.args)
         return ENode(self.key, tuple(arg.find() for arg in self.args))
+
 
 class EGraph:
     def __init__(self):
@@ -46,7 +50,7 @@ class EGraph:
         # quickly check whether the egraph has mutated
         self.version = 0
 
-        # dict<ENode_canon, EClassID_noncanon> for checking if an enode is 
+        # dict<ENode_canon, EClassID_noncanon> for checking if an enode is
         # already defined
         self.hashcons = {}
 
@@ -55,19 +59,21 @@ class EGraph:
 
     def is_saturated_or_timeout(self):
         pass
-    
+
     def ematch(self, pattern: ENode):
-        # Env = Dict[str, EClassID] # type alias
+        Env = Dict[str, EClassID]  # type alias
         """
         :param pattern: ENode
         :returns: List[Tuple[EClassID, Env]]
         """
-        canoncial_eclasses = self.eclasses()
-        def match_in(p: ENode, eid: EClassID, env: 'Env'):
+        canonical_eclasses = self.eclasses()
+
+
+        def match_in(p: ENode, eid: EClassID, env: Env):
             """
             :returns: Tuple[Bool, Env]
             """
-            def enode_matches(p: ENode, e:ENode, env: 'Env'):
+            def enode_matches(p: ENode, e: ENode, env: Env):
                 """
                 :returns: Tuple[Bool, Env]
                 """
@@ -83,7 +89,7 @@ class EGraph:
                 # this is a leaf variable like x: match it with the env
                 id = p.key
                 if id not in env:
-                    env = {**env} # expensive, but can be optimized (?)
+                    env = {**env}  # expensive, but can be optimized (?)
                     env[id] = eid
                     return True, env
                 else:
@@ -91,14 +97,14 @@ class EGraph:
                     return env[id] is eid, env
             else:
                 # does one of the ways to define this class match the pattern?
-                for enode in canoncial_eclasses[eid]:
+                for enode in canonical_eclasses[eid]:
                     matches, new_env = enode_matches(p, enode, env)
                     if matches:
                         return True, new_env
                 return False, env
 
         matches = []
-        for eid in canoncial_eclasses.keys():
+        for eid in canonical_eclasses.keys():
             match, env = match_in(pattern, eid, {})
             if match:
                 matches.append((eid, env))
@@ -121,7 +127,7 @@ class EGraph:
         self.hashcons[enode] = eclassid
         # rhs of hashcons isn't canonicalized, so do that now
         return eclassid.find()
-    
+
     def merge(self, eclass1, eclass2):
         e1 = eclass1.find()
         e2 = eclass2.find()
@@ -141,7 +147,7 @@ class EGraph:
         # list.
         self.worklist.append(e2)
 
-    # Ensure we have a de-duplicated version of the EGraph    
+    # Ensure we have a de-duplicated version of the EGraph
     def rebuild(self):
         while self.worklist:
             # de-duplicate repeated calls to repair the same EClass
@@ -149,7 +155,7 @@ class EGraph:
             self.worklist = []
             for eclassid in todo:
                 self.repair(eclassid)
-    
+
     def repair(self, eclassid):
         """
         Repair the EClassID `eclassid` by canonicalizing all nodes in the
@@ -158,33 +164,35 @@ class EGraph:
         assert eclassid.parent is None
         # reset uses of eclassid, repopulate at the end
         uses, eclassid.uses = eclassid.uses, []
-        
+
         # any uses in hashcons may not be canoncial, so re-canonicalize them
         for enode, eclass in uses:
             if enode in self.hashcons:
                 del self.hashcons[enode]
             enode = enode.canonicalize()
             self.hashcons[enode] = eclass.find()
-        
-        # because we merged eclasses, some enodes might now be the same, meaning
-        # we can merge additional eclasses.
+
+        # because we merged eclasses, some enodes might now be the same,
+        # meaning we can merge additional eclasses.
         new_uses = {}
         for enode, eclass in uses:
             enode = enode.canonicalize()
             if enode in new_uses:
                 self.merge(eclass, new_uses[enode])
             new_uses[enode] = eclass.find()
-        #note the find: it's possible that eclassid was merged, and uses should
-        # be tied to the parent instead
+        # note the find: it's possible that eclassid was merged, and uses
+        # should be tied to the parent instead
         eclassid.find().uses += new_uses.items()
-    
+
     # TODO: fix circular dependency so that we can properly import rule
     def apply_rules(self, rules: List['Rule']):
         """
         :param rules: List[Rule]
         :returns: EGraph
         """
-        canoncial_eclasses = self.eclasses()
+
+        canonical_eclasses = self.eclasses()
+
         matches = []
         for rule in rules:
             for eid, env in self.ematch(rule.lhs):
@@ -197,10 +205,9 @@ class EGraph:
             self.merge(eid, new_eid)
         self.rebuild()
         return self
-    
+
     def extract_best(self):
         pass
-
 
     def eclasses(self):
         """
@@ -215,7 +222,7 @@ class EGraph:
             else:
                 result[eid].append(enode)
         return result
-    
+
     def subst(self, pattern: ENode, env: Dict[str, EClassID]):
         """
         :param pattern: ENode
@@ -225,5 +232,6 @@ class EGraph:
         if not pattern.args and not isinstance(pattern.key, int):
             return env[pattern.key]
         else:
-            enode = ENode(pattern.key, tuple(self.subst(arg, env) for arg in pattern.args))
+            enode = ENode(pattern.key,
+                          tuple(self.subst(arg, env) for arg in pattern.args))
             return self.add(enode)
