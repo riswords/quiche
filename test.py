@@ -2,7 +2,6 @@ from egraph import *
 from expr_test import *
 from rewrite import Rule
 
-import pytest
 
 def exp(fn):
     c = fn.__code__
@@ -104,7 +103,7 @@ def test_expr_ematch():
     actual = EGraph()
     root = add_expr_node(actual, times_divide())
     rule = Rule(lambda x, y, z: ((x * y) / z, x * (y / z))) # reassociate *,/
-    matches = actual.ematch(rule.lhs)
+    matches = actual.ematch(rule.lhs, actual.eclasses())
 
     # expect exactly one match
     assert len(matches) == 1
@@ -127,7 +126,7 @@ def test_expr_subst():
     actual.merge(times2_root, shift_root)
     actual.rebuild()
     rule = Rule(lambda x, y, z: ((x * y) / z, x * (y / z))) # reassociate *,/
-    matches = actual.ematch(rule.lhs)
+    matches = actual.ematch(rule.lhs, actual.eclasses())
     lhs, env = matches[0]
     rhs = actual.subst(rule.rhs, env)
 

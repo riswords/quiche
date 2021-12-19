@@ -60,14 +60,12 @@ class EGraph:
     def is_saturated_or_timeout(self):
         pass
 
-    def ematch(self, pattern: ENode):
+    def ematch(self, pattern: ENode, eclasses: Dict[EClassID, List[ENode]]):
         Env = Dict[str, EClassID]  # type alias
         """
         :param pattern: ENode
         :returns: List[Tuple[EClassID, Env]]
         """
-        canonical_eclasses = self.eclasses()
-
 
         def match_in(p: ENode, eid: EClassID, env: Env):
             """
@@ -97,14 +95,14 @@ class EGraph:
                     return env[id] is eid, env
             else:
                 # does one of the ways to define this class match the pattern?
-                for enode in canonical_eclasses[eid]:
+                for enode in eclasses[eid]:
                     matches, new_env = enode_matches(p, enode, env)
                     if matches:
                         return True, new_env
                 return False, env
 
         matches = []
-        for eid in canonical_eclasses.keys():
+        for eid in eclasses.keys():
             match, env = match_in(pattern, eid, {})
             if match:
                 matches.append((eid, env))
@@ -195,7 +193,7 @@ class EGraph:
 
         matches = []
         for rule in rules:
-            for eid, env in self.ematch(rule.lhs):
+            for eid, env in self.ematch(rule.lhs, canonical_eclasses):
                 matches.append((rule, eid, env))
         print(f'VERSION {self.version}')
         for rule, eid, env in matches:
