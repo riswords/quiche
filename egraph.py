@@ -1,6 +1,5 @@
 from typing import NamedTuple, Tuple, Dict, List
-# TODO: fix circular dependency so that we can properly import rule
-# from rewrite import Rule
+from rewrite import Rule
 
 
 class EClassID:
@@ -182,13 +181,11 @@ class EGraph:
         # should be tied to the parent instead
         eclassid.find().uses += new_uses.items()
 
-    # TODO: fix circular dependency so that we can properly import rule
     def apply_rules(self, rules: List['Rule']):
         """
         :param rules: List[Rule]
         :returns: EGraph
         """
-
         canonical_eclasses = self.eclasses()
 
         matches = []

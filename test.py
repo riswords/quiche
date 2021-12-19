@@ -120,7 +120,8 @@ def test_merge_exprs():
 def test_expr_ematch():
     actual = EGraph()
     _ = add_expr_node(actual, times_divide())
-    rule = Rule(lambda x, y, z: ((x * y) / z, x * (y / z)))  # reassociate *,/
+    # Rule to reassociate *,/
+    rule = ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
     matches = actual.ematch(rule.lhs, actual.eclasses())
 
     # expect exactly one match
@@ -144,7 +145,8 @@ def test_expr_subst():
     times2_root = add_expr_node(actual, times2())
     actual.merge(times2_root, shift_root)
     actual.rebuild()
-    rule = Rule(lambda x, y, z: ((x * y) / z, x * (y / z)))  # reassociate *,/
+    # Rule to reassociate *,/
+    rule = ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
     matches = actual.ematch(rule.lhs, actual.eclasses())
     lhs, env = matches[0]
     rhs = actual.subst(rule.rhs, env)
@@ -169,10 +171,14 @@ def test_apply_rules():
     actual = EGraph()
     _ = add_expr_node(actual, times_divide())
     rules = [
-        Rule(lambda x: (x * 2, x << 1)),  # mult by 2 is shift left 1
-        Rule(lambda x, y, z: ((x * y) / z, x * (y / z))),  # reassociate *,/
-        Rule(lambda x: (x / x, ExprNode(1, ()))),  # x/x = 1
-        Rule(lambda x: (x * 1, x))  # simplify mult by 1
+        # Multiply x by 2 === shift x left by 1
+        ExprNode.make_rule(lambda x: (x * 2, x << 1)),
+        # Reassociate *,/
+        ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z))),
+        # x/x = 1
+        ExprNode.make_rule(lambda x: (x / x, ExprNode(1, ()))),
+        # Simplify x * 1 === x
+        ExprNode.make_rule(lambda x: (x * 1, x))
     ]
     versions = [4, 10, 11, 12]
     for version in versions:
@@ -197,10 +203,14 @@ def test_schedule():
     actual = EGraph()
     root = add_expr_node(actual, times_divide())
     rules = [
-        Rule(lambda x: (x * 2, x << 1)),  # mult by 2 is shift left 1
-        Rule(lambda x, y, z: ((x * y) / z, x * (y / z))),  # reassociate *,/
-        Rule(lambda x: (x / x, ExprNode(1, ()))),  # x/x = 1
-        Rule(lambda x: (x * 1, x))  # simplify mult by 1
+        # Multiply x by 2 === shift x left by 1
+        ExprNode.make_rule(lambda x: (x * 2, x << 1)),
+        # Reassociate *,/
+        ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z))),
+        # x/x = 1
+        ExprNode.make_rule(lambda x: (x / x, ExprNode(1, ()))),
+        # Simplify x * 1 === x
+        ExprNode.make_rule(lambda x: (x * 1, x))
     ]
     versions = [4, 10, 11, 12]
     best_terms = ['(/ (* a 2) 2)', '(/ (<< a 1) 2)', '(* a 1)', 'a']

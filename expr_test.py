@@ -2,7 +2,7 @@ from typing import Dict, Tuple, Union
 import math
 
 from egraph import ENode, EGraph, EClassID
-# from rewrite import Rule
+from rewrite import Rule
 
 
 class ExprNode(ENode):
@@ -28,6 +28,17 @@ class ExprNode(ENode):
             return f'({self.key} {" ".join(str(arg) for arg in self.args)})'
         else:
             return str(self.key)
+
+    @staticmethod
+    def exp(fn):
+        c = fn.__code__
+        args = [ExprNode(c.co_varnames[i], ()) for i in range(c.co_argcount)]
+        return fn(*args)
+
+    @staticmethod
+    def make_rule(fn):
+        lhs, rhs = ExprNode.exp(fn)
+        return Rule(lhs, rhs)
 
 
 class ExprNodeCost:
@@ -59,9 +70,10 @@ class ExprNodeCost:
         else:
             return 0
 
-    def enode_cost_rec(self,
-                       enode: ExprNode,
-                       costs: Dict[EClassID, Tuple[int, ExprNode]]) -> int:
+    def enode_cost_rec(
+            self,
+            enode: ExprNode,
+            costs: Dict[EClassID, Tuple[int, ExprNode]]) -> ExprNode:
         """
         Calculate the cost of a node based on its key and its children
 
