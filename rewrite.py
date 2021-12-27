@@ -1,5 +1,3 @@
-
-
 class Rule:
     # TODO: remove ExprNode dependency
     def __init__(self, lhs, rhs):
@@ -7,4 +5,4 @@ class Rule:
         self.rhs = rhs
 
     def __repr__(self):
-        return '{} -> {}'.format(self.lhs, self.rhs)
+        return "{} -> {}".format(self.lhs, self.rhs)

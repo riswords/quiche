@@ -6,21 +6,22 @@ from rewrite import Rule
 
 
 class ExprNode(ENode):
-    key: 'Union[str, int]'  # use int to represent int literals,
-    args: 'Tuple[ExprNode,...]'
+    key: "Union[str, int]"  # use int to represent int literals,
+    args: "Tuple[ExprNode,...]"
 
     # overload some operators to allow us to easily construct these
     def _mk_op(key):
-        return lambda *args: \
-            ExprNode(key,
-                     tuple(arg
-                           if isinstance(arg, ExprNode)
-                           else ExprNode(arg, ()) for arg in args))
+        return lambda *args: ExprNode(
+            key,
+            tuple(
+                arg if isinstance(arg, ExprNode) else ExprNode(arg, ()) for arg in args
+            ),
+        )
 
-    __add__ = _mk_op('+')
-    __mul__ = _mk_op('*')
-    __lshift__ = _mk_op('<<')
-    __truediv__ = _mk_op('/')
+    __add__ = _mk_op("+")
+    __mul__ = _mk_op("*")
+    __lshift__ = _mk_op("<<")
+    __truediv__ = _mk_op("/")
 
     # print it out like an s-expr
     def __repr__(self):
@@ -49,46 +50,46 @@ class ExprNodeCost:
     * costs 2
     / costs 3
     """
+
     def __init__(self):
         self.expr_costs = {
-            '+': 1,
-            '<<': 1,
-            '*': 2,
-            '/': 3,
+            "+": 1,
+            "<<": 1,
+            "*": 2,
+            "/": 3,
         }
 
     def enode_cost(self, node: ExprNode, costs: Dict[EClassID, int]) -> int:
         """
         Calculate the cost of a node based solely on its key (not its children)
         """
-        if node.key == '+' or node.key == '<<':
+        if node.key == "+" or node.key == "<<":
             return 1
-        elif node.key == '*':
+        elif node.key == "*":
             return 2
-        elif node.key == '/':
+        elif node.key == "/":
             return 3
         else:
             return 0
 
     def enode_cost_rec(
-            self,
-            enode: ExprNode,
-            costs: Dict[EClassID, Tuple[int, ExprNode]]) -> ExprNode:
+        self, enode: ExprNode, costs: Dict[EClassID, Tuple[int, ExprNode]]
+    ) -> ExprNode:
         """
         Calculate the cost of a node based on its key and its children
 
         :param enode: the node to calculate the cost of
         :param costs: dictionary containing costs of children
         """
-        return self.enode_cost(enode, costs) + \
-            sum(costs[eid][0] for eid in enode.args)
+        return self.enode_cost(enode, costs) + sum(costs[eid][0] for eid in enode.args)
 
-    def extract(self,
-                eclassid: EClassID,
-                costs: Dict[EClassID, Tuple[int, ExprNode]]) -> ExprNode:
+    def extract(
+        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ExprNode]]
+    ) -> ExprNode:
         enode = costs[eclassid][1]
-        return ExprNode(enode.key,
-                        tuple(self.extract(eid, costs) for eid in enode.args))
+        return ExprNode(
+            enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
+        )
 
 
 class ExprNodeExtractor:
@@ -112,8 +113,10 @@ class ExprNodeExtractor:
         while changed:
             changed = False
             for eclass, enodes in eclasses.items():
-                new_cost = min((self.cost_model.enode_cost_rec(enode, costs),
-                                enode) for enode in enodes)
+                new_cost = min(
+                    (self.cost_model.enode_cost_rec(enode, costs), enode)
+                    for enode in enodes
+                )
                 if costs[eclass][0] != new_cost[0]:
                     changed = True
                 costs[eclass] = new_cost

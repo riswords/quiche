@@ -3,7 +3,7 @@ from rewrite import Rule
 
 
 class EClassID:
-    def __init__(self, id, parent: 'EClassID' = None):
+    def __init__(self, id, parent: "EClassID" = None):
         self.id = id
         self.parent = parent
 
@@ -14,7 +14,7 @@ class EClassID:
         self.uses = []
 
     def __repr__(self):
-        return f'e{self.id}'
+        return f"e{self.id}"
 
     def find(self):
         if self.parent is None:
@@ -70,6 +70,7 @@ class EGraph:
             """
             :returns: Tuple[Bool, Env]
             """
+
             def enode_matches(p: ENode, e: ENode, env: Env):
                 """
                 :returns: Tuple[Bool, Env]
@@ -82,6 +83,7 @@ class EGraph:
                     if not matched:
                         return False, env
                 return True, new_env
+
             if not p.args and not isinstance(p.key, int):
                 # this is a leaf variable like x: match it with the env
                 id = p.key
@@ -181,7 +183,7 @@ class EGraph:
         # should be tied to the parent instead
         eclassid.find().uses += new_uses.items()
 
-    def apply_rules(self, rules: List['Rule']):
+    def apply_rules(self, rules: List["Rule"]):
         """
         :param rules: List[Rule]
         :returns: EGraph
@@ -192,11 +194,11 @@ class EGraph:
         for rule in rules:
             for eid, env in self.ematch(rule.lhs, canonical_eclasses):
                 matches.append((rule, eid, env))
-        print(f'VERSION {self.version}')
+        print(f"VERSION {self.version}")
         for rule, eid, env in matches:
             new_eid = self.subst(rule.rhs, env)
             if eid is not new_eid:
-                print(f'{eid} MATCHED {rule} with {env}')
+                print(f"{eid} MATCHED {rule} with {env}")
             self.merge(eid, new_eid)
         self.rebuild()
         return self
@@ -227,6 +229,7 @@ class EGraph:
         if not pattern.args and not isinstance(pattern.key, int):
             return env[pattern.key]
         else:
-            enode = ENode(pattern.key,
-                          tuple(self.subst(arg, env) for arg in pattern.args))
+            enode = ENode(
+                pattern.key, tuple(self.subst(arg, env) for arg in pattern.args)
+            )
             return self.add(enode)
