@@ -1,8 +1,8 @@
 from typing import Dict, Tuple, Union
 import math
 
-from egraph import ENode, EGraph, EClassID
-from rewrite import Rule
+from quiche.egraph import ENode, EGraph, EClassID
+from quiche.rewrite import Rule
 
 
 class ExprNode(ENode):

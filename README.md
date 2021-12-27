@@ -1,0 +1,4 @@
+Run tests:
+
+$ pytest -s
+

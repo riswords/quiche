@@ -1,5 +1,6 @@
 from typing import NamedTuple, Tuple, Dict, List
-from rewrite import Rule
+
+from .rewrite import Rule
 
 
 class EClassID:

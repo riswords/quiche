@@ -1,9 +1,11 @@
+import pytest
+
 from typing import Dict, List
 
-from egraph import EGraph, ENode
-from expr_test import ExprNode, ExprNodeCost, ExprNodeExtractor
-from rewrite import Rule
+from quiche.egraph import EGraph, ENode
+from quiche.rewrite import Rule
 
+from .expr_test import ExprNode, ExprNodeCost, ExprNodeExtractor
 
 def exp(fn):
     c = fn.__code__
