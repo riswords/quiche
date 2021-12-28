@@ -223,7 +223,7 @@ def test_schedule():
 
 def run_test():
     eg = EGraph()
-    root = add_expr_node(eg, times_divide())
+    root = eg.from_tree(times_divide())
     rules = make_rules()
     cost_model = ExprNodeCost()
     cost_analysis = ExprNodeExtractor(cost_model)
