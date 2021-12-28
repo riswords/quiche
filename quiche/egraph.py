@@ -17,6 +17,31 @@ class EClassID:
     def __repr__(self):
         return f"e{self.id}"
 
+    # TODO: This is a hack to make min work properly in term extraction
+    # because otherwise if we have a tie, we get an error about
+    # EClassIDs not being comparable.
+    def __lt__(self, other):
+        return self.id < other.id
+
+    def __le__(self, other):
+        return self.id <= other.id
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __ne__(self, other):
+        return self.id != other.id
+
+    def __gt__(self, other):
+        return self.id > other.id
+
+    def __ge__(self, other):
+        return self.id >= other.id
+    ## End TODO
+
     def find(self):
         if self.parent is None:
             return self
