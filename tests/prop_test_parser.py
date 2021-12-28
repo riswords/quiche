@@ -1,7 +1,33 @@
+from quiche.rewrite import Rule
+from quiche.egraph import ENode, EClassID, EGraph
+
 from .prop_test_lexer import PropLexer
-from .prop_test_node import PropNode
 
 import ply.yacc as yacc
+
+class PropNode(ENode):
+    key: "Union[str, int]"  # use int to represent int literals,
+    args: "Tuple[PropNode,...]"
+
+    
+    @classmethod
+    def parse(cls, data):
+        parser = PropParser()
+        parser.build()
+        result = parser.parse(data)
+        return result
+
+
+    # print it out like an s-expr
+    def __repr__(self):
+        if self.args:
+            return f'({self.key} {" ".join(str(arg) for arg in self.args)})'
+        else:
+            return str(self.key)
+
+    @staticmethod
+    def make_rule(lhs, rhs):
+        return Rule(PropNode.parse(lhs), PropNode.parse(rhs))
 
 class PropParser(object):
     tokens = PropLexer.tokens
