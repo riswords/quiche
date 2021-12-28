@@ -1,3 +1,6 @@
+from typing import Dict, Tuple
+import math
+
 from quiche.rewrite import Rule
 from quiche.egraph import ENode, EClassID, EGraph
 
@@ -29,16 +32,96 @@ class PropNode(ENode):
     def make_rule(lhs, rhs):
         return Rule(PropNode.parse(lhs), PropNode.parse(rhs))
 
+class PropNodeCost:
+    """
+    Simple cost model for PropNodes:
+
+    ~ costs 1
+    &, | cost 2
+    -> costs 3
+    """
+
+    def __init__(self):
+        self.prop_costs = {
+            "~": 1,
+            "&": 2,
+            "|": 2,
+            "->": 2,
+        }
+
+    def enode_cost(self, node: PropNode, costs: Dict[EClassID, int]) -> int:
+        """
+        Calculate the cost of a node based solely on its key (not its children)
+        """
+        return self.prop_costs.get(node.key, 0)
+
+    def enode_cost_rec(
+        self, enode: PropNode, costs: Dict[EClassID, Tuple[int, PropNode]]
+    ) -> int:
+        """
+        Calculate the cost of a node based on its key and its children
+
+        :param enode: the node to calculate the cost of
+        :param costs: dictionary containing costs of children
+        """
+        return self.enode_cost(enode, costs) + sum(costs[eid][0] for eid in enode.args)
+
+    def extract(
+        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, PropNode]]
+    ) -> PropNode:
+        enode = costs[eclassid][1]
+        return PropNode(
+            enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
+        )
+
+
+class PropNodeExtractor:
+    def __init__(self, cost_model: PropNodeCost):
+        self.cost_model = cost_model
+
+    def schedule(self, egraph: EGraph, result: EClassID) -> PropNode:
+        """
+        Extract lowest cost ENode from EGraph.
+        Calculate lowest cost for each node using `prop_costs` to weight each
+        operation.
+
+        :returns: lowest cost node
+        """
+        result = result.find()
+        eclasses = egraph.eclasses()
+        costs = {eid: (math.inf, None) for eid in eclasses.keys()}
+        changed = True
+
+        # iterate until saturation, taking lowest cost option
+        while changed:
+            changed = False
+            for eclass, enodes in eclasses.items():
+                temp = [self.cost_model.enode_cost_rec(enode, costs) for enode in enodes]
+                # TODO: remove extraneous prints
+                # print("COST TYPE: ", [type(cost) for cost in temp])
+                # print("COSTS: ", temp)
+                # print("MIN COST: ", min(temp))
+                # print("ENODE ARGS: ", [enode.args for enode in enodes])
+                new_cost = min(
+                    (self.cost_model.enode_cost_rec(enode, costs), enode)
+                    for enode in enodes
+                )
+                if costs[eclass][0] != new_cost[0]:
+                    changed = True
+                costs[eclass] = new_cost
+
+        return self.cost_model.extract(result, costs)
+
 class PropParser(object):
     tokens = PropLexer.tokens
     """
         id: bool | symbol | ( prop )
         term : id
-            | NOT term
         prop: term
             | (AND prop prop)
             | (OR prop prop)
             | (IMPLIES prop prop)
+            | (NOT prop)
     """
     # Parsing rules
     precedence = (
@@ -72,9 +155,9 @@ class PropParser(object):
         #print("PROP IMPLIES: [{}: {}], [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
         p[0] = PropNode('->', (p[2], p[3]))
         
-    def p_term_not(self, p):
-        'term : NOT term'
-        #print("NOT TERM: {}: {}".format(p[2], type(p[2])))
+    def p_prop_not(self, p):
+        'prop : NOT prop'
+        #print("NOT PROP: {}: {}".format(p[2], type(p[2])))
         p[0] = PropNode('~', (p[2],))
     
     def p_term_id(self, p):
