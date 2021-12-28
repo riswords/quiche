@@ -13,12 +13,6 @@ def exp(fn):
     return fn(*args)
 
 
-def add_expr_node(egraph: EGraph, node: ExprNode):
-    return egraph.add(
-        ENode(node.key, tuple(add_expr_node(egraph, n) for n in node.args))
-    )
-
-
 def make_rules():
     rules = [
         Rule(lambda x: (x * 2, x << 1)),  # mult by 2 is shift left 1
@@ -64,7 +58,7 @@ def verify_egraph_shape(
 
 def test_add_times_divide():
     actual = EGraph()
-    _ = add_expr_node(actual, times_divide())
+    _ = actual.from_tree(times_divide())
     expected = {
         "e0": {"a": []},
         "e1": {"2": []},
@@ -76,7 +70,7 @@ def test_add_times_divide():
 
 def test_add_shift():
     actual = EGraph()
-    _ = add_expr_node(actual, shift())
+    _ = actual.from_tree(shift())
     expected = {
         "e0": {"a": []},
         "e1": {"1": []},
@@ -87,8 +81,8 @@ def test_add_shift():
 
 def test_add_two_exprs():
     actual = EGraph()
-    _ = add_expr_node(actual, times_divide())
-    _ = add_expr_node(actual, shift())
+    _ = actual.from_tree(times_divide())
+    _ = actual.from_tree(shift())
     expected = {
         "e0": {"a": []},
         "e1": {"2": []},
@@ -102,9 +96,9 @@ def test_add_two_exprs():
 
 def test_merge_exprs():
     actual = EGraph()
-    _ = add_expr_node(actual, times_divide())
-    times_root = add_expr_node(actual, times2())
-    shift_root = add_expr_node(actual, shift())
+    _ = actual.from_tree(times_divide())
+    times_root = actual.from_tree(times2())
+    shift_root = actual.from_tree(shift())
     actual.merge(times_root, shift_root)
     actual.rebuild()
 
@@ -120,7 +114,7 @@ def test_merge_exprs():
 
 def test_expr_ematch():
     actual = EGraph()
-    _ = add_expr_node(actual, times_divide())
+    _ = actual.from_tree(times_divide())
     # Rule to reassociate *,/
     rule = ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
     matches = actual.ematch(rule.lhs, actual.eclasses())
@@ -141,9 +135,9 @@ def test_expr_ematch():
 
 def test_expr_subst():
     actual = EGraph()
-    _ = add_expr_node(actual, times_divide())
-    shift_root = add_expr_node(actual, shift())
-    times2_root = add_expr_node(actual, times2())
+    _ = actual.from_tree(times_divide())
+    shift_root = actual.from_tree(shift())
+    times2_root = actual.from_tree(times2())
     actual.merge(times2_root, shift_root)
     actual.rebuild()
     # Rule to reassociate *,/
@@ -167,7 +161,7 @@ def test_expr_subst():
 
 def test_apply_rules():
     actual = EGraph()
-    _ = add_expr_node(actual, times_divide())
+    _ = actual.from_tree(times_divide())
     rules = [
         # Multiply x by 2 === shift x left by 1
         ExprNode.make_rule(lambda x: (x * 2, x << 1)),
@@ -195,7 +189,7 @@ def test_apply_rules():
 def test_schedule():
     # Verify rule application
     actual = EGraph()
-    root = add_expr_node(actual, times_divide())
+    root = actual.from_tree(times_divide())
     rules = [
         # Multiply x by 2 === shift x left by 1
         ExprNode.make_rule(lambda x: (x * 2, x << 1)),

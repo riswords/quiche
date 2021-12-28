@@ -128,6 +128,11 @@ class EGraph:
         # rhs of hashcons isn't canonicalized, so do that now
         return eclassid.find()
 
+    def from_tree(self, enode: ENode):
+        return self.add(
+            ENode(enode.key, tuple(self.from_tree(n) for n in enode.args))
+        )
+
     def merge(self, eclass1, eclass2):
         e1 = eclass1.find()
         e2 = eclass2.find()
