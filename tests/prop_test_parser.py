@@ -43,10 +43,10 @@ class PropNodeCost:
 
     def __init__(self):
         self.prop_costs = {
-            "~": 1,
+            "~": 2,
             "&": 2,
             "|": 2,
-            "->": 2,
+            "->": 3,
         }
 
     def enode_cost(self, node: PropNode, costs: Dict[EClassID, int]) -> int:
