@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 import math
 
 from quiche.rewrite import Rule
@@ -8,18 +8,17 @@ from .prop_test_lexer import PropLexer
 
 import ply.yacc as yacc
 
+
 class PropNode(ENode):
     key: "Union[str, int]"  # use int to represent int literals,
     args: "Tuple[PropNode,...]"
 
-    
     @classmethod
     def parse(cls, data):
         parser = PropParser()
         parser.build()
         result = parser.parse(data)
         return result
-
 
     # print it out like an s-expr
     def __repr__(self):
@@ -31,6 +30,7 @@ class PropNode(ENode):
     @staticmethod
     def make_rule(lhs, rhs):
         return Rule(PropNode.parse(lhs), PropNode.parse(rhs))
+
 
 class PropNodeCost:
     """
@@ -96,12 +96,6 @@ class PropNodeExtractor:
         while changed:
             changed = False
             for eclass, enodes in eclasses.items():
-                temp = [self.cost_model.enode_cost_rec(enode, costs) for enode in enodes]
-                # TODO: remove extraneous prints
-                # print("COST TYPE: ", [type(cost) for cost in temp])
-                # print("COSTS: ", temp)
-                # print("MIN COST: ", min(temp))
-                # print("ENODE ARGS: ", [enode.args for enode in enodes])
                 new_cost = min(
                     (self.cost_model.enode_cost_rec(enode, costs), enode)
                     for enode in enodes
@@ -111,6 +105,7 @@ class PropNodeExtractor:
                 costs[eclass] = new_cost
 
         return self.cost_model.extract(result, costs)
+
 
 class PropParser(object):
     tokens = PropLexer.tokens
@@ -125,10 +120,10 @@ class PropParser(object):
     """
     # Parsing rules
     precedence = (
-        ('left', 'AND'),
-        ('left', 'OR'),
-        ('left', 'IMPLIES'),
-        ('right', 'NOT'),
+        ("left", "AND"),
+        ("left", "OR"),
+        ("left", "IMPLIES"),
+        ("right", "NOT"),
     )
 
     def __init__(self):
@@ -136,56 +131,56 @@ class PropParser(object):
         self.lexer.build()
 
     def p_prop_term(self, p):
-        'prop : term'
-        #print("PROP TERM: {}: {}".format(p[1], type(p[1])))
+        "prop : term"
+        # print("PROP TERM: {}: {}".format(p[1], type(p[1])))
         p[0] = p[1]
 
     def p_prop_and(self, p):
-        'prop : AND prop prop'
-        #print("PROP AND: [{}: {}] [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
-        p[0] = PropNode('&', (p[2], p[3]))
-    
+        "prop : AND prop prop"
+        # print("PROP AND: [{}: {}] [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
+        p[0] = PropNode("&", (p[2], p[3]))
+
     def p_prop_or(self, p):
-        'prop : OR prop prop'
-        #print("PROP OR: [{}: {}] [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
-        p[0] = PropNode('|', (p[2], p[3]))
+        "prop : OR prop prop"
+        # print("PROP OR: [{}: {}] [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
+        p[0] = PropNode("|", (p[2], p[3]))
 
     def p_prop_implies(self, p):
-        'prop : IMPLIES prop prop'
-        #print("PROP IMPLIES: [{}: {}], [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
-        p[0] = PropNode('->', (p[2], p[3]))
-        
+        "prop : IMPLIES prop prop"
+        # print("PROP IMPLIES: [{}: {}], [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
+        p[0] = PropNode("->", (p[2], p[3]))
+
     def p_prop_not(self, p):
-        'prop : NOT prop'
-        #print("NOT PROP: {}: {}".format(p[2], type(p[2])))
-        p[0] = PropNode('~', (p[2],))
-    
+        "prop : NOT prop"
+        # print("NOT PROP: {}: {}".format(p[2], type(p[2])))
+        p[0] = PropNode("~", (p[2],))
+
     def p_term_id(self, p):
-        'term : id'
-        #print("TERM ID: {}: {}".format(p[1], type(p[1])))
+        "term : id"
+        # print("TERM ID: {}: {}".format(p[1], type(p[1])))
         p[0] = p[1]
 
     def p_id_symbol(self, p):
-        'id : SYMBOL'
-        #print("ID SYMBOL: {}: {}".format(p[1], type(p[1])))
+        "id : SYMBOL"
+        # print("ID SYMBOL: {}: {}".format(p[1], type(p[1])))
         p[0] = PropNode(p[1], ())
-    
+
     def p_id_bool(self, p):
-        'id : BOOL'
-        #print("ID BOOL: {}: {}".format(p[1], type(p[1])))
+        "id : BOOL"
+        # print("ID BOOL: {}: {}".format(p[1], type(p[1])))
         p[0] = PropNode(p[1], ())
-    
+
     def p_id_paren(self, p):
-        'prop : LPAREN prop RPAREN'
-        #print("PAREN: {}: {}".format(p[2], type(p[2])))
+        "prop : LPAREN prop RPAREN"
+        # print("PAREN: {}: {}".format(p[2], type(p[2])))
         p[0] = p[2]
 
     def p_error(self, p):
         print("Syntax error at '%s'" % p)
-    
+
     def build(self, **kwargs):
         self.parser = yacc.yacc(module=self, **kwargs)
-    
+
     def parse(self, data):
         self.lexer.input(data)
         return self.parser.parse(data, lexer=self.lexer.lexer)

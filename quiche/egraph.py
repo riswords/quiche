@@ -40,7 +40,8 @@ class EClassID:
 
     def __ge__(self, other):
         return self.id >= other.id
-    ## End TODO
+
+    # end TODO
 
     def find(self):
         if self.parent is None:
@@ -154,9 +155,7 @@ class EGraph:
         return eclassid.find()
 
     def from_tree(self, enode: ENode):
-        return self.add(
-            ENode(enode.key, tuple(self.from_tree(n) for n in enode.args))
-        )
+        return self.add(ENode(enode.key, tuple(self.from_tree(n) for n in enode.args)))
 
     def merge(self, eclass1, eclass2):
         e1 = eclass1.find()

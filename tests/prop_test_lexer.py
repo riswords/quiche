@@ -1,36 +1,26 @@
-
 import ply.lex as lex
 
 
 class PropLexer(object):
-    tokens = (
-        'BOOL',
-        'AND',
-        'OR',
-        'IMPLIES',
-        'NOT',
-        'SYMBOL',
-        'LPAREN',
-        'RPAREN'
-    )
+    tokens = ("BOOL", "AND", "OR", "IMPLIES", "NOT", "SYMBOL", "LPAREN", "RPAREN")
 
     # Regular expression rules for simple tokens
-    t_AND = r'\&'
-    t_OR = r'\|'
-    t_IMPLIES = r'->'
-    t_NOT = r'~'
-    t_LPAREN = r'\('
-    t_RPAREN = r'\)'
+    t_AND = r"\&"
+    t_OR = r"\|"
+    t_IMPLIES = r"->"
+    t_NOT = r"~"
+    t_LPAREN = r"\("
+    t_RPAREN = r"\)"
 
-    t_ignore = ' \t'
+    t_ignore = " \t"
 
     def t_BOOL(self, t):
-        r'True|False'
+        r"True|False"
         t.value = bool(t.value)
         return t
 
     def t_SYMBOL(self, t):
-        r'[a-zA-Z_][a-zA-Z_0-9]*'
+        r"[a-zA-Z_][a-zA-Z_0-9]*"
         t.value = t.value
         return t
 
