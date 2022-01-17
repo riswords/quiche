@@ -1,16 +1,17 @@
 from typing import Dict, Tuple, Union
 import math
 
-from quiche.egraph import ENode, EGraph, EClassID
+from quiche.quiche_tree import QuicheTree
+from quiche.egraph import EGraph, EClassID, ENode
 from quiche.rewrite import Rule
 
 
-class ExprNode(ENode):
-    key: "Union[str, int]"  # use int to represent int literals,
-    args: "Tuple[ExprNode,...]"
+class ExprNode(ENode, QuicheTree):
+    key: Union[str, int]  # use int to represent int literals,
+    args: Tuple[EClassID, ...]
 
     # overload some operators to allow us to easily construct these
-    def _mk_op(key):
+    def _mk_op(key: str):
         return lambda *args: ExprNode(
             key,
             tuple(
@@ -29,6 +30,12 @@ class ExprNode(ENode):
             return f'({self.key} {" ".join(str(arg) for arg in self.args)})'
         else:
             return str(self.key)
+
+    def value(self):
+        return self.key
+
+    def children(self):
+        return self.args
 
     @staticmethod
     def exp(fn):
@@ -59,7 +66,7 @@ class ExprNodeCost:
             "/": 3,
         }
 
-    def enode_cost(self, node: ExprNode, costs: Dict[EClassID, int]) -> int:
+    def enode_cost(self, node: ENode, costs: Dict[EClassID, Tuple[int, ENode]]) -> int:
         """
         Calculate the cost of a node based solely on its key (not its children)
         """
@@ -73,8 +80,8 @@ class ExprNodeCost:
             return 0
 
     def enode_cost_rec(
-        self, enode: ExprNode, costs: Dict[EClassID, Tuple[int, ExprNode]]
-    ) -> ExprNode:
+        self, enode: ENode, costs: Dict[EClassID, Tuple[int, ENode]]
+    ) -> ENode:
         """
         Calculate the cost of a node based on its key and its children
 
@@ -84,10 +91,10 @@ class ExprNodeCost:
         return self.enode_cost(enode, costs) + sum(costs[eid][0] for eid in enode.args)
 
     def extract(
-        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ExprNode]]
-    ) -> ExprNode:
+        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
+    ) -> ENode:
         enode = costs[eclassid][1]
-        return ExprNode(
+        return ENode(
             enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
         )
 
@@ -96,7 +103,7 @@ class ExprNodeExtractor:
     def __init__(self, cost_model: ExprNodeCost):
         self.cost_model = cost_model
 
-    def schedule(self, egraph: EGraph, result: EClassID) -> ExprNode:
+    def schedule(self, egraph: EGraph, result: EClassID) -> ENode:
         """
         Extract lowest cost ENode from EGraph.
         Calculate lowest cost for each node using `expr_costs` to weight each
@@ -106,6 +113,11 @@ class ExprNodeExtractor:
         """
         result = result.find()
         eclasses = egraph.eclasses()
+        # TODO: initializing costs like this doesn't typecheck because inf is a
+        # float, and there is no maxint in python3. Rework so that
+        # uninitialized costs can be absent from `costs`. (NOTE: this might
+        # also help with the issue of eclasses containing enodes with the same
+        # key).
         costs = {eid: (math.inf, None) for eid in eclasses.keys()}
         changed = True
 

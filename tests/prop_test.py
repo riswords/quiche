@@ -1,6 +1,6 @@
 from quiche.egraph import EGraph
 
-from .prop_test_parser import PropParser, PropNode, PropNodeCost, PropNodeExtractor
+from .prop_test_parser import PropParser, PropTree, PropTreeCost, PropTreeExtractor
 
 from .test_egraph import verify_egraph_shape, print_egraph
 
@@ -8,13 +8,13 @@ from .test_egraph import verify_egraph_shape, print_egraph
 def make_rules():
     rules = [
         # x -> y ===> ~x | y
-        PropNode.make_rule("(-> x y)", "(| (~ x) y)"),
+        PropTree.make_rule("(-> x y)", "(| (~ x) y)"),
         # ~x | y ===> x -> y
-        PropNode.make_rule("(| (~ x) y)", "(-> x y)"),
+        PropTree.make_rule("(| (~ x) y)", "(-> x y)"),
         # x ===> ~ (~x)
-        PropNode.make_rule("x", "~ (~ x)"),
+        PropTree.make_rule("x", "~ (~ x)"),
         # x | y ===> y | x
-        PropNode.make_rule("(| x y)", "(| y x)"),
+        PropTree.make_rule("(| x y)", "(| y x)"),
     ]
     return rules
 
@@ -141,7 +141,7 @@ def test_prop_ematch():
     assert verify_egraph_shape(actual, expected)
 
     # Rule to rewrite x -> y to ~x | y
-    rule = PropNode.make_rule("(-> x y)", "(| (~ x) y)")
+    rule = PropTree.make_rule("(-> x y)", "(| (~ x) y)")
     matches = actual.ematch(rule.lhs, actual.eclasses())
 
     # expect exactly one match
@@ -165,7 +165,7 @@ def test_expr_subst():
     actual.rebuild()
 
     # x -> y <===> ~x | y
-    rule = PropNode.make_rule("(-> x y)", "(| (~ x) y)")
+    rule = PropTree.make_rule("(-> x y)", "(| (~ x) y)")
     matches = actual.ematch(rule.lhs, actual.eclasses())
     lhs, env = matches[0]
     rhs = actual.subst(rule.rhs, env)
@@ -211,8 +211,8 @@ def test_schedule_contrapositive():
     for version, term in zip(versions, best_terms):
         assert actual.version == version
         # Verify schedule-extracted term is correct
-        cost_model = PropNodeCost()
-        cost_analysis = PropNodeExtractor(cost_model)
+        cost_model = PropTreeCost()
+        cost_analysis = PropTreeExtractor(cost_model)
         extracted = cost_analysis.schedule(actual, root)
         assert str(extracted) == term
         actual.apply_rules(rules)

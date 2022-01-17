@@ -3,15 +3,17 @@ import math
 
 from quiche.rewrite import Rule
 from quiche.egraph import ENode, EClassID, EGraph
+from quiche.quiche_tree import QuicheTree
 
 from .prop_test_lexer import PropLexer
 
 import ply.yacc as yacc
 
 
-class PropNode(ENode):
-    key: "Union[str, int]"  # use int to represent int literals,
-    args: "Tuple[PropNode,...]"
+class PropTree(QuicheTree):
+    def __init__(self, value: Union[str, int], children: Tuple["PropTree", ...]):
+        self._value = value
+        self._children = children
 
     @classmethod
     def parse(cls, data):
@@ -20,21 +22,20 @@ class PropNode(ENode):
         result = parser.parse(data)
         return result
 
-    # print it out like an s-expr
-    def __repr__(self):
-        if self.args:
-            return f'({self.key} {" ".join(str(arg) for arg in self.args)})'
-        else:
-            return str(self.key)
+    def value(self):
+        return self._value
+
+    def children(self):
+        return self._children
 
     @staticmethod
     def make_rule(lhs, rhs):
-        return Rule(PropNode.parse(lhs), PropNode.parse(rhs))
+        return Rule(PropTree.parse(lhs), PropTree.parse(rhs))
 
 
-class PropNodeCost:
+class PropTreeCost:
     """
-    Simple cost model for PropNodes:
+    Simple cost model for PropTree nodes:
 
     ~ costs 1
     &, | cost 2
@@ -49,14 +50,14 @@ class PropNodeCost:
             "->": 3,
         }
 
-    def enode_cost(self, node: PropNode, costs: Dict[EClassID, int]) -> int:
+    def enode_cost(self, node: ENode, costs: Dict[EClassID, int]) -> int:
         """
         Calculate the cost of a node based solely on its key (not its children)
         """
         return self.prop_costs.get(node.key, 0)
 
     def enode_cost_rec(
-        self, enode: PropNode, costs: Dict[EClassID, Tuple[int, PropNode]]
+        self, enode: ENode, costs: Dict[EClassID, Tuple[int, ENode]]
     ) -> int:
         """
         Calculate the cost of a node based on its key and its children
@@ -67,19 +68,19 @@ class PropNodeCost:
         return self.enode_cost(enode, costs) + sum(costs[eid][0] for eid in enode.args)
 
     def extract(
-        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, PropNode]]
-    ) -> PropNode:
+        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
+    ) -> ENode:
         enode = costs[eclassid][1]
-        return PropNode(
+        return ENode(
             enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
         )
 
 
-class PropNodeExtractor:
-    def __init__(self, cost_model: PropNodeCost):
+class PropTreeExtractor:
+    def __init__(self, cost_model: PropTreeCost):
         self.cost_model = cost_model
 
-    def schedule(self, egraph: EGraph, result: EClassID) -> PropNode:
+    def schedule(self, egraph: EGraph, result: EClassID) -> ENode:
         """
         Extract lowest cost ENode from EGraph.
         Calculate lowest cost for each node using `prop_costs` to weight each
@@ -138,22 +139,22 @@ class PropParser(object):
     def p_prop_and(self, p):
         "prop : AND prop prop"
         # print("PROP AND: [{}: {}] [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
-        p[0] = PropNode("&", (p[2], p[3]))
+        p[0] = PropTree("&", (p[2], p[3]))
 
     def p_prop_or(self, p):
         "prop : OR prop prop"
         # print("PROP OR: [{}: {}] [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
-        p[0] = PropNode("|", (p[2], p[3]))
+        p[0] = PropTree("|", (p[2], p[3]))
 
     def p_prop_implies(self, p):
         "prop : IMPLIES prop prop"
         # print("PROP IMPLIES: [{}: {}], [{}: {}]".format(p[2], type(p[2]), p[3], type(p[3])))
-        p[0] = PropNode("->", (p[2], p[3]))
+        p[0] = PropTree("->", (p[2], p[3]))
 
     def p_prop_not(self, p):
         "prop : NOT prop"
         # print("NOT PROP: {}: {}".format(p[2], type(p[2])))
-        p[0] = PropNode("~", (p[2],))
+        p[0] = PropTree("~", (p[2],))
 
     def p_term_id(self, p):
         "term : id"
@@ -163,12 +164,12 @@ class PropParser(object):
     def p_id_symbol(self, p):
         "id : SYMBOL"
         # print("ID SYMBOL: {}: {}".format(p[1], type(p[1])))
-        p[0] = PropNode(p[1], ())
+        p[0] = PropTree(p[1], ())
 
     def p_id_bool(self, p):
         "id : BOOL"
         # print("ID BOOL: {}: {}".format(p[1], type(p[1])))
-        p[0] = PropNode(p[1], ())
+        p[0] = PropTree(p[1], ())
 
     def p_id_paren(self, p):
         "prop : LPAREN prop RPAREN"

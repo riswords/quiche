@@ -1,5 +1,6 @@
-from typing import NamedTuple, Tuple, Dict, List
+from typing import NamedTuple, Tuple, Dict, List, Any
 
+from .quiche_tree import QuicheTree
 from .rewrite import Rule
 
 
@@ -12,7 +13,7 @@ class EClassID:
         # and the EClassID of that use
         # Only set on a canonical EClass (parent == None) and is used in
         # `EGraph.rebuild()`
-        self.uses = []
+        self.uses: List[Tuple[ENode, EClassID]] = []
 
     def __repr__(self):
         return f"e{self.id}"
@@ -52,7 +53,7 @@ class EClassID:
 
 
 class ENode(NamedTuple):
-    key: str
+    key: Any
     args: Tuple[EClassID, ...]
 
     # def __init__(self, key, args):
@@ -63,6 +64,13 @@ class ENode(NamedTuple):
     # def apply_substitution(self, subst) -> 'ENode':
     #    # returns ENode
     #    pass
+
+    # print it out like an s-expr
+    def __repr__(self):
+        if self.args:
+            return f'({self.key} {" ".join(str(arg) for arg in self.args)})'
+        else:
+            return str(self.key)
 
     def canonicalize(self):
         # print("Canonize node: ", self.key, ", Canonize args: ", self.args)
@@ -86,34 +94,34 @@ class EGraph:
     def is_saturated_or_timeout(self):
         pass
 
-    def ematch(self, pattern: ENode, eclasses: Dict[EClassID, List[ENode]]):
+    def ematch(self, pattern: QuicheTree, eclasses: Dict[EClassID, List[ENode]]):
         Env = Dict[str, EClassID]  # type alias
         """
-        :param pattern: ENode
+        :param pattern: QuicheTree
         :returns: List[Tuple[EClassID, Env]]
         """
 
-        def match_in(p: ENode, eid: EClassID, env: Env):
+        def match_in(p: QuicheTree, eid: EClassID, env: Env):
             """
             :returns: Tuple[Bool, Env]
             """
 
-            def enode_matches(p: ENode, e: ENode, env: Env):
+            def enode_matches(p: QuicheTree, e: ENode, env: Env):
                 """
                 :returns: Tuple[Bool, Env]
                 """
-                if enode.key != p.key:
+                if enode.key != p.value():
                     return False, env
                 new_env = env
-                for arg_pattern, arg_eid in zip(p.args, enode.args):
+                for arg_pattern, arg_eid in zip(p.children(), enode.args):
                     matched, new_env = match_in(arg_pattern, arg_eid, new_env)
                     if not matched:
                         return False, env
                 return True, new_env
 
-            if not p.args and not isinstance(p.key, int):
+            if not p.children() and not isinstance(p.value(), int):
                 # this is a leaf variable like x: match it with the env
-                id = p.key
+                id = p.value()
                 if id not in env:
                     env = {**env}  # expensive, but can be optimized (?)
                     env[id] = eid
@@ -154,8 +162,17 @@ class EGraph:
         # rhs of hashcons isn't canonicalized, so do that now
         return eclassid.find()
 
-    def from_tree(self, enode: ENode):
-        return self.add(ENode(enode.key, tuple(self.from_tree(n) for n in enode.args)))
+    def from_tree(self, node: QuicheTree):
+        """
+        Construct an EGraph from a tree.
+
+        :param node: a "tree node"-like object where node implements functions
+        `value()` to get the node's value and `children()` to get the node's
+        children.
+
+        :returns: the EClassID of the root node
+        """
+        return self.add(ENode(node.value(), tuple(self.from_tree(n) for n in node.children())))
 
     def merge(self, eclass1, eclass2):
         e1 = eclass1.find()
@@ -250,16 +267,16 @@ class EGraph:
                 result[eid].append(enode)
         return result
 
-    def subst(self, pattern: ENode, env: Dict[str, EClassID]):
+    def subst(self, pattern: QuicheTree, env: Dict[str, EClassID]):
         """
-        :param pattern: ENode
+        :param pattern: QuicheTree
         :param env: Dict[str, EClassID]
         :returns: EClassID
         """
-        if not pattern.args and not isinstance(pattern.key, int):
-            return env[pattern.key]
+        if not pattern.children() and not isinstance(pattern.value(), int):
+            return env[pattern.value()]
         else:
             enode = ENode(
-                pattern.key, tuple(self.subst(arg, env) for arg in pattern.args)
+                pattern.value(), tuple(self.subst(child, env) for child in pattern.children())
             )
             return self.add(enode)
