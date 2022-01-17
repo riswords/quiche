@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union
+from typing import Dict, NamedTuple, Tuple, Union
 import math
 
 from quiche.quiche_tree import QuicheTree
@@ -6,9 +6,9 @@ from quiche.egraph import EGraph, EClassID, ENode
 from quiche.rewrite import Rule
 
 
-class ExprNode(ENode, QuicheTree):
+class ExprNode(NamedTuple):
     key: Union[str, int]  # use int to represent int literals,
-    args: Tuple[EClassID, ...]
+    args: Tuple["ExprNode", ...]
 
     # overload some operators to allow us to easily construct these
     def _mk_op(key: str):
@@ -31,22 +31,33 @@ class ExprNode(ENode, QuicheTree):
         else:
             return str(self.key)
 
-    def value(self):
-        return self.key
-
-    def children(self):
-        return self.args
-
     @staticmethod
     def exp(fn):
         c = fn.__code__
         args = [ExprNode(c.co_varnames[i], ()) for i in range(c.co_argcount)]
         return fn(*args)
 
+
+class ExprTree(QuicheTree):
+    def __init__(self, root: ExprNode):
+        # self.root = root
+        self._value = root.key
+        self._children = [ExprTree(arg) for arg in root.args]
+
+    def value(self):
+        # return self.root.key
+        return self._value
+
+    def children(self):
+        # if self.root.args:
+        #     return [ExprTree(arg) for arg in self.root.args]
+        # return []
+        return self._children
+
     @staticmethod
     def make_rule(fn):
         lhs, rhs = ExprNode.exp(fn)
-        return Rule(lhs, rhs)
+        return Rule(ExprTree(lhs), ExprTree(rhs))
 
 
 class ExprNodeCost:
@@ -81,7 +92,7 @@ class ExprNodeCost:
 
     def enode_cost_rec(
         self, enode: ENode, costs: Dict[EClassID, Tuple[int, ENode]]
-    ) -> ENode:
+    ) -> int:
         """
         Calculate the cost of a node based on its key and its children
 
@@ -92,9 +103,9 @@ class ExprNodeCost:
 
     def extract(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
-    ) -> ENode:
+    ) -> ExprNode:
         enode = costs[eclassid][1]
-        return ENode(
+        return ExprNode(
             enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
         )
 
@@ -103,7 +114,7 @@ class ExprNodeExtractor:
     def __init__(self, cost_model: ExprNodeCost):
         self.cost_model = cost_model
 
-    def schedule(self, egraph: EGraph, result: EClassID) -> ENode:
+    def schedule(self, egraph: EGraph, result: EClassID) -> ExprNode:
         """
         Extract lowest cost ENode from EGraph.
         Calculate lowest cost for each node using `expr_costs` to weight each

@@ -3,7 +3,7 @@ from typing import Dict, List
 from quiche.egraph import EGraph
 from quiche.rewrite import Rule
 
-from .expr_test import ExprNode, ExprNodeCost, ExprNodeExtractor
+from .expr_test import ExprNode, ExprNodeCost, ExprNodeExtractor, ExprTree
 
 
 def exp(fn):
@@ -57,7 +57,7 @@ def verify_egraph_shape(
 
 def test_add_times_divide():
     actual = EGraph()
-    _ = actual.from_tree(times_divide())
+    _ = actual.from_tree(ExprTree(times_divide()))
     expected = {
         "e0": {"a": []},
         "e1": {"2": []},
@@ -69,7 +69,7 @@ def test_add_times_divide():
 
 def test_add_shift():
     actual = EGraph()
-    _ = actual.from_tree(shift())
+    _ = actual.from_tree(ExprTree(shift()))
     expected = {
         "e0": {"a": []},
         "e1": {"1": []},
@@ -80,8 +80,8 @@ def test_add_shift():
 
 def test_add_two_exprs():
     actual = EGraph()
-    _ = actual.from_tree(times_divide())
-    _ = actual.from_tree(shift())
+    _ = actual.from_tree(ExprTree(times_divide()))
+    _ = actual.from_tree(ExprTree(shift()))
     expected = {
         "e0": {"a": []},
         "e1": {"2": []},
@@ -95,9 +95,9 @@ def test_add_two_exprs():
 
 def test_merge_exprs():
     actual = EGraph()
-    _ = actual.from_tree(times_divide())
-    times_root = actual.from_tree(times2())
-    shift_root = actual.from_tree(shift())
+    _ = actual.from_tree(ExprTree(times_divide()))
+    times_root = actual.from_tree(ExprTree(times2()))
+    shift_root = actual.from_tree(ExprTree(shift()))
     actual.merge(times_root, shift_root)
     actual.rebuild()
 
@@ -113,9 +113,9 @@ def test_merge_exprs():
 
 def test_expr_ematch():
     actual = EGraph()
-    _ = actual.from_tree(times_divide())
+    _ = actual.from_tree(ExprTree(times_divide()))
     # Rule to reassociate *,/
-    rule = ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
+    rule = ExprTree.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
     matches = actual.ematch(rule.lhs, actual.eclasses())
 
     # expect exactly one match
@@ -134,13 +134,13 @@ def test_expr_ematch():
 
 def test_expr_subst():
     actual = EGraph()
-    _ = actual.from_tree(times_divide())
-    shift_root = actual.from_tree(shift())
-    times2_root = actual.from_tree(times2())
+    _ = actual.from_tree(ExprTree(times_divide()))
+    shift_root = actual.from_tree(ExprTree(shift()))
+    times2_root = actual.from_tree(ExprTree(times2()))
     actual.merge(times2_root, shift_root)
     actual.rebuild()
     # Rule to reassociate *,/
-    rule = ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
+    rule = ExprTree.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
     matches = actual.ematch(rule.lhs, actual.eclasses())
     lhs, env = matches[0]
     rhs = actual.subst(rule.rhs, env)
@@ -160,16 +160,16 @@ def test_expr_subst():
 
 def test_apply_rules():
     actual = EGraph()
-    _ = actual.from_tree(times_divide())
+    _ = actual.from_tree(ExprTree(times_divide()))
     rules = [
         # Multiply x by 2 === shift x left by 1
-        ExprNode.make_rule(lambda x: (x * 2, x << 1)),
+        ExprTree.make_rule(lambda x: (x * 2, x << 1)),
         # Reassociate *,/
-        ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z))),
+        ExprTree.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z))),
         # x/x = 1
-        ExprNode.make_rule(lambda x: (x / x, ExprNode(1, ()))),
+        ExprTree.make_rule(lambda x: (x / x, ExprNode(1, ()))),
         # Simplify x * 1 === x
-        ExprNode.make_rule(lambda x: (x * 1, x)),
+        ExprTree.make_rule(lambda x: (x * 1, x)),
     ]
     versions = [4, 10, 11, 12]
     for version in versions:
@@ -188,16 +188,16 @@ def test_apply_rules():
 def test_schedule():
     # Verify rule application
     actual = EGraph()
-    root = actual.from_tree(times_divide())
+    root = actual.from_tree(ExprTree(times_divide()))
     rules = [
         # Multiply x by 2 === shift x left by 1
-        ExprNode.make_rule(lambda x: (x * 2, x << 1)),
+        ExprTree.make_rule(lambda x: (x * 2, x << 1)),
         # Reassociate *,/
-        ExprNode.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z))),
+        ExprTree.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z))),
         # x/x = 1
-        ExprNode.make_rule(lambda x: (x / x, ExprNode(1, ()))),
+        ExprTree.make_rule(lambda x: (x / x, ExprNode(1, ()))),
         # Simplify x * 1 === x
-        ExprNode.make_rule(lambda x: (x * 1, x)),
+        ExprTree.make_rule(lambda x: (x * 1, x)),
     ]
     versions = [4, 10, 11, 12]
     best_terms = ["(/ (* a 2) 2)", "(/ (<< a 1) 2)", "(* a 1)", "a"]
@@ -222,7 +222,7 @@ def test_schedule():
 
 def run_test():
     eg = EGraph()
-    root = eg.from_tree(times_divide())
+    root = eg.from_tree(ExprTree(times_divide()))
     rules = make_rules()
     cost_model = ExprNodeCost()
     cost_analysis = ExprNodeExtractor(cost_model)

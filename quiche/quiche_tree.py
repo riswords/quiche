@@ -2,12 +2,10 @@ from abc import ABC, abstractmethod
 
 
 class QuicheTree(ABC):
-    @property
     @abstractmethod
     def value(self):
         pass
 
-    @property
     @abstractmethod
     def children(self):
         pass
