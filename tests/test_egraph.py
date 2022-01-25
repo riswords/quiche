@@ -45,13 +45,16 @@ def verify_egraph_shape(
     eclasses = actual_egraph.eclasses()
     # assert len(eclasses) == len(expected_shape)
     for eclassid, eclass in eclasses.items():
-        actual_eclassid = str(eclassid)
-        assert actual_eclassid in expected_shape
+        eclassid_str = str(eclassid)
+        assert eclassid_str in expected_shape
         for enode in eclass:
-            actual_key = str(enode.key)
-            assert actual_key in expected_shape[actual_eclassid]
-            for arg in enode.args:
-                assert str(arg) in expected_shape[actual_eclassid][actual_key]
+            key_str = str(enode.key)
+            assert key_str in expected_shape[eclassid_str]
+            assert (
+                tuple(str(arg) for arg in enode.args)
+                in expected_shape[eclassid_str][key_str]
+            )
+
     return True
 
 
@@ -59,10 +62,10 @@ def test_add_times_divide():
     actual = EGraph()
     _ = actual.from_tree(ExprTree(times_divide()))
     expected = {
-        "e0": {"a": []},
-        "e1": {"2": []},
-        "e2": {"*": ["e0", "e1"]},
-        "e3": {"/": ["e2", "e1"]},
+        "e0": {"a": [()]},
+        "e1": {"2": [()]},
+        "e2": {"*": [("e0", "e1")]},
+        "e3": {"/": [("e2", "e1")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -71,9 +74,9 @@ def test_add_shift():
     actual = EGraph()
     _ = actual.from_tree(ExprTree(shift()))
     expected = {
-        "e0": {"a": []},
-        "e1": {"1": []},
-        "e2": {"<<": ["e0", "e1"]},
+        "e0": {"a": [()]},
+        "e1": {"1": [()]},
+        "e2": {"<<": [("e0", "e1")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -83,12 +86,12 @@ def test_add_two_exprs():
     _ = actual.from_tree(ExprTree(times_divide()))
     _ = actual.from_tree(ExprTree(shift()))
     expected = {
-        "e0": {"a": []},
-        "e1": {"2": []},
-        "e2": {"*": ["e0", "e1"]},
-        "e3": {"/": ["e2", "e1"]},
-        "e4": {"1": []},
-        "e5": {"<<": ["e0", "e4"]},
+        "e0": {"a": [()]},
+        "e1": {"2": [()]},
+        "e2": {"*": [("e0", "e1")]},
+        "e3": {"/": [("e2", "e1")]},
+        "e4": {"1": [()]},
+        "e5": {"<<": [("e0", "e4")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -102,11 +105,11 @@ def test_merge_exprs():
     actual.rebuild()
 
     expected = {
-        "e0": {"a": []},
-        "e1": {"2": []},
-        "e3": {"/": ["e5", "e1"]},
-        "e4": {"1": []},
-        "e5": {"<<": ["e0", "e4"], "*": ["e0", "e1"]},
+        "e0": {"a": [()]},
+        "e1": {"2": [()]},
+        "e3": {"/": [("e5", "e1")]},
+        "e4": {"1": [()]},
+        "e5": {"<<": [("e0", "e4")], "*": [("e0", "e1")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -147,13 +150,13 @@ def test_expr_subst():
 
     assert str(rhs) == "e7"
     expected = {
-        "e0": {"a": []},
-        "e1": {"2": []},
-        "e3": {"/": ["e5", "e1"]},
-        "e4": {"1": []},
-        "e5": {"<<": ["e0", "e4"], "*": ["e0", "e1"]},
-        "e6": {"/": ["e1", "e1"]},
-        "e7": {"*": ["e0", "e6"]},
+        "e0": {"a": [()]},
+        "e1": {"2": [()]},
+        "e3": {"/": [("e5", "e1")]},
+        "e4": {"1": [()]},
+        "e5": {"<<": [("e0", "e4")], "*": [("e0", "e1")]},
+        "e6": {"/": [("e1", "e1")]},
+        "e7": {"*": [("e0", "e6")]},
     }
     verify_egraph_shape(actual, expected)
 
@@ -177,10 +180,10 @@ def test_apply_rules():
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
     expected = {
-        "e0": {"a": [], "/": ["e5", "e1"], "*": ["e0", "e4"]},
-        "e1": {"2": []},
-        "e4": {"1": [], "/": ["e1", "e1"]},
-        "e5": {"*": ["e0", "e1"], "<<": ["e0", "e4"]},
+        "e0": {"a": [()], "/": [("e5", "e1")], "*": [("e0", "e4")]},
+        "e1": {"2": [()]},
+        "e4": {"1": [()], "/": [("e1", "e1")]},
+        "e5": {"*": [("e0", "e1")], "<<": [("e0", "e4")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -212,10 +215,10 @@ def test_schedule():
     assert actual.version == versions[-1]
     assert str(cost_analysis.schedule(actual, root)) == best_terms[-1]
     expected = {
-        "e0": {"a": [], "/": ["e5", "e1"], "*": ["e0", "e4"]},
-        "e1": {"2": []},
-        "e4": {"1": [], "/": ["e1", "e1"]},
-        "e5": {"*": ["e0", "e1"], "<<": ["e0", "e4"]},
+        "e0": {"a": [()], "/": [("e5", "e1")], "*": [("e0", "e4")]},
+        "e1": {"2": [()]},
+        "e4": {"1": [()], "/": [("e1", "e1")]},
+        "e5": {"*": [("e0", "e1")], "<<": [("e0", "e4")]},
     }
     assert verify_egraph_shape(actual, expected)
 

@@ -8,13 +8,13 @@ from .test_egraph import verify_egraph_shape, print_egraph
 def make_rules():
     rules = [
         # x -> y ===> ~x | y
-        PropTree.make_rule("(-> x y)", "(| (~ x) y)"),
+        PropTree.make_rule("(-> ?x ?y)", "(| (~ ?x) ?y)"),
         # ~x | y ===> x -> y
-        PropTree.make_rule("(| (~ x) y)", "(-> x y)"),
+        PropTree.make_rule("(| (~ ?x) ?y)", "(-> ?x ?y)"),
         # x ===> ~ (~x)
-        PropTree.make_rule("x", "~ (~ x)"),
+        PropTree.make_rule("?x", "~ (~ ?x)"),
         # x | y ===> y | x
-        PropTree.make_rule("(| x y)", "(| y x)"),
+        PropTree.make_rule("(| ?x ?y)", "(| ?y ?x)"),
     ]
     return rules
 
@@ -47,7 +47,7 @@ def test_implies():
     actual = EGraph()
     actual.from_tree(tree)
 
-    expected = {"e0": {"x": []}, "e1": {"y": []}, "e2": {"->": ["e0", "e1"]}}
+    expected = {"e0": {"x": [()]}, "e1": {"y": [()]}, "e2": {"->": [("e0", "e1")]}}
     assert verify_egraph_shape(actual, expected)
 
 
@@ -58,10 +58,10 @@ def test_nor():
     actual.from_tree(tree)
 
     expected = {
-        "e0": {"x": []},
-        "e1": {"~": ["e0"]},
-        "e2": {"y": []},
-        "e3": {"|": ["e1", "e2"]},
+        "e0": {"x": [()]},
+        "e1": {"~": [("e0",)]},
+        "e2": {"y": [()]},
+        "e3": {"|": [("e1", "e2")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -74,11 +74,11 @@ def test_add_implies_and_nor():
     actual.rebuild()
 
     expected = {
-        "e0": {"x": []},
-        "e1": {"y": []},
-        "e2": {"->": ["e0", "e1"]},
-        "e3": {"~": ["e0"]},
-        "e4": {"|": ["e3", "e1"]},
+        "e0": {"x": [()]},
+        "e1": {"y": [()]},
+        "e2": {"->": [("e0", "e1")]},
+        "e3": {"~": [("e0",)]},
+        "e4": {"|": [("e3", "e1")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -93,13 +93,13 @@ def test_and_or_not_implies():
     actual.from_tree(tree)
 
     expected = {
-        "e0": {"x": []},
-        "e1": {"y": []},
-        "e2": {"->": ["e0", "e1"]},
-        "e3": {"~": ["e0"]},
-        "e4": {"z": []},
-        "e5": {"->": ["e3", "e4"]},
-        "e6": {"&": ["e2", "e5"]},
+        "e0": {"x": [()]},
+        "e1": {"y": [()]},
+        "e2": {"->": [("e0", "e1")]},
+        "e3": {"~": [("e0",)]},
+        "e4": {"z": [()]},
+        "e5": {"->": [("e3", "e4")]},
+        "e6": {"&": [("e2", "e5")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -112,10 +112,10 @@ def test_merge_props():
     actual.rebuild()
 
     expected = {
-        "e0": {"x": []},
-        "e1": {"y": []},
-        "e4": {"->": ["e0", "e1"], "|": ["e3", "e1"]},
-        "e3": {"~": ["e0"]},
+        "e0": {"x": [()]},
+        "e1": {"y": [()]},
+        "e4": {"->": [("e0", "e1")], "|": [("e3", "e1")]},
+        "e3": {"~": [("e0",)]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -132,16 +132,16 @@ def test_prop_ematch():
 
     # Verify tree shape
     expected = {
-        "e0": {"a": []},
-        "e1": {"b": []},
-        "e2": {"&": ["e0", "e1"]},
-        "e3": {"c": []},
-        "e4": {"->": ["e2", "e3"]},
+        "e0": {"a": [()]},
+        "e1": {"b": [()]},
+        "e2": {"&": [("e0", "e1")]},
+        "e3": {"c": [()]},
+        "e4": {"->": [("e2", "e3")]},
     }
     assert verify_egraph_shape(actual, expected)
 
     # Rule to rewrite x -> y to ~x | y
-    rule = PropTree.make_rule("(-> x y)", "(| (~ x) y)")
+    rule = PropTree.make_rule("(-> ?x ?y)", "(| (~ ?x) ?y)")
     matches = actual.ematch(rule.lhs, actual.eclasses())
 
     # expect exactly one match
@@ -153,8 +153,8 @@ def test_prop_ematch():
     assert str(match[0]) == "e4"
 
     assert len(match[1]) == 2
-    assert str(match[1]["x"]) == "e2"
-    assert str(match[1]["y"]) == "e3"
+    assert str(match[1]["?x"]) == "e2"
+    assert str(match[1]["?y"]) == "e3"
 
 
 def test_expr_subst():
@@ -165,17 +165,17 @@ def test_expr_subst():
     actual.rebuild()
 
     # x -> y <===> ~x | y
-    rule = PropTree.make_rule("(-> x y)", "(| (~ x) y)")
+    rule = PropTree.make_rule("(-> ?x ?y)", "(| (~ ?x) ?y)")
     matches = actual.ematch(rule.lhs, actual.eclasses())
     lhs, env = matches[0]
     rhs = actual.subst(rule.rhs, env)
 
     assert str(rhs) == "e4"
     expected = {
-        "e0": {"x": []},
-        "e1": {"y": []},
-        "e3": {"~": ["e0"]},
-        "e4": {"|": ["e3", "e1"], "->": ["e0", "e1"]},
+        "e0": {"x": [()]},
+        "e1": {"y": [()]},
+        "e3": {"~": [("e0",)]},
+        "e4": {"|": [("e3", "e1")], "->": [("e0", "e1")]},
     }
     verify_egraph_shape(actual, expected)
 
@@ -184,19 +184,22 @@ def test_apply_rules_for_contrapositive():
     actual = EGraph()
     _ = actual.from_tree(x_implies_y())
     rules = make_rules()
-    versions = [3, 14, 16]
+    versions = [3, 14, 16, 24]
     for version in versions:
         assert actual.version == version
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    # print_egraph(actual)
     expected = {
-        "e3": {"~": ["e5"]},
-        "e5": {"x": [], "~": ["e3"]},
-        "e6": {"~": ["e7"]},
-        "e7": {"y": [], "~": ["e6"]},
-        "e8": {"~": ["e10"]},
-        "e10": {"~": ["e8"], "->": ["e5", "e7"], "|": ["e3", "e7"], "|": ["e7", "e3"]},
+        "e3": {"~": [("e5",)]},
+        "e5": {"x": [()], "~": [("e3",)]},
+        "e6": {"~": [("e7",)]},
+        "e7": {"y": [()], "~": [("e6",)]},
+        "e14": {"~": [("e13",)]},
+        "e13": {
+            "~": [("e14",)],
+            "->": [("e5", "e7"), ("e6", "e3")],
+            "|": [("e3", "e7"), ("e7", "e3")],
+        },
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -206,8 +209,8 @@ def test_schedule_contrapositive():
     actual = EGraph()
     root = actual.from_tree(not_y_implies_not_x())
     rules = make_rules()
-    versions = [5, 18, 20]
-    best_terms = ["(-> (~ y) (~ x))", "(| y (~ x))", "(| y (~ x))", "(| y (~ x))"]
+    versions = [5, 18, 20, 28]
+    best_terms = ["(-> (~ y) (~ x))", "(| y (~ x))", "(| y (~ x))", "(-> x y)"]
     for version, term in zip(versions, best_terms):
         assert actual.version == version
         # Verify schedule-extracted term is correct
@@ -218,19 +221,16 @@ def test_schedule_contrapositive():
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
     assert str(cost_analysis.schedule(actual, root)) == best_terms[-1]
-
-    # print_egraph(actual)
     expected = {
-        "e5": {"y": [], "~": ["e7"]},
-        "e7": {"~": ["e5"]},
-        "e8": {"x": [], "~": ["e9"]},
-        "e9": {"~": ["e8"]},
-        "e10": {"~": ["e12"]},
-        "e12": {
-            "~": ["e10"],
-            "|": ["e5", "e9"],
-            "->": ["e7", "e9"],
-            "|": ["e9", "e5"],
+        "e5": {"y": [()], "~": [("e7",)]},
+        "e7": {"~": [("e5",)]},
+        "e8": {"x": [()], "~": [("e9",)]},
+        "e9": {"~": [("e8",)]},
+        "e16": {"~": [("e15",)]},
+        "e15": {
+            "~": [("e16",)],
+            "|": [("e5", "e9"), ("e9", "e5")],
+            "->": [("e7", "e9"), ("e8", "e5")],
         },
     }
     assert verify_egraph_shape(actual, expected)

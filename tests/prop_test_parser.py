@@ -28,6 +28,9 @@ class PropTree(QuicheTree):
     def children(self):
         return self._children
 
+    def is_pattern_symbol(self):
+        return self.value().startswith("?")
+
     @staticmethod
     def make_rule(lhs, rhs):
         return Rule(PropTree.parse(lhs), PropTree.parse(rhs))
@@ -65,15 +68,14 @@ class PropTreeCost:
         :param enode: the node to calculate the cost of
         :param costs: dictionary containing costs of children
         """
-        return self.enode_cost(enode, costs) + sum(costs[eid][0] for eid in enode.args)
+        child_costs = sum(costs[eid][0] for eid in enode.args)
+        return self.enode_cost(enode, costs) + child_costs
 
     def extract(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
     ) -> ENode:
         enode = costs[eclassid][1]
-        return ENode(
-            enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
-        )
+        return ENode(enode.key, tuple(self.extract(eid, costs) for eid in enode.args))
 
 
 class PropTreeExtractor:

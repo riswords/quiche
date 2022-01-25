@@ -98,50 +98,90 @@ class EGraph:
         Env = Dict[str, EClassID]  # type alias
         """
         :param pattern: QuicheTree
+        :param eclasses: Dict[EClassID, List[ENode]]
         :returns: List[Tuple[EClassID, Env]]
         """
 
-        def match_in(p: QuicheTree, eid: EClassID, env: Env):
+        def match_in(
+            p: QuicheTree, eid: EClassID, envs: List[Env]
+        ) -> Tuple[bool, List[Env]]:
             """
-            :returns: Tuple[Bool, Env]
+            :param p: QuicheTree
+            :param eid: EClassID
+            :param envs: List[Env]
+            :returns: Tuple[bool, List[Env]]
             """
 
-            def enode_matches(p: QuicheTree, e: ENode, env: Env):
+            def enode_matches(p: QuicheTree, e: ENode, envs: List[Env]):
                 """
-                :returns: Tuple[Bool, Env]
+                :returns: Tuple[Bool, List[Env]]
                 """
-                if enode.key != p.value():
-                    return False, env
-                new_env = env
-                for arg_pattern, arg_eid in zip(p.children(), enode.args):
-                    matched, new_env = match_in(arg_pattern, arg_eid, new_env)
+                if e.key != p.value():
+                    return False, envs
+                    # return False, []
+
+                matched = False
+                matched_envs = []
+                for env in envs:
+                    matched_env, new_envs = enode_matches_in_env(p, e, env)
+                    if matched_env:
+                        matched = True
+                        matched_envs.extend(new_envs)
+
+                return matched, matched_envs
+
+            def enode_matches_in_env(p: QuicheTree, e: ENode, env: Env):
+                """
+                :param p: QuicheTree
+                :param e: ENode
+                :param env: Env
+                :returns: Tuple[Bool, List[Env]]
+                """
+                if e.key != p.value():
+                    return False, [env]
+
+                new_envs = [env]
+                for arg_pattern, arg_eid in zip(p.children(), e.args):
+                    matched, new_envs = match_in(arg_pattern, arg_eid, new_envs)
                     if not matched:
-                        return False, env
-                return True, new_env
+                        return False, [env]
+                return True, new_envs
 
-            if not p.children() and not isinstance(p.value(), int):
-                # this is a leaf variable like x: match it with the env
+            if not p.children() and p.is_pattern_symbol():
+                # this is a leaf variable like ?x: match it with the env
                 id = p.value()
-                if id not in env:
-                    env = {**env}  # expensive, but can be optimized (?)
-                    env[id] = eid
-                    return True, env
-                else:
-                    # check that this value matches the same thing (?)
-                    return env[id] is eid, env
+                matched = False
+                matched_envs = []
+                for env in envs:
+                    if id not in env:
+                        # create a copy of the env, keeping references to eclassids
+                        env = {**env}  # expensive, but can be optimized (?)
+                        env[id] = eid
+                        matched = True
+                        matched_envs.append(env)
+                    else:
+                        # check that this value matches the same thing (?)
+                        if env[id] is eid:
+                            matched = True
+                            matched_envs.append(env)
+                return matched, matched_envs
             else:
+                matched = False
+                matched_envs = []
                 # does one of the ways to define this class match the pattern?
                 for enode in eclasses[eid]:
-                    matches, new_env = enode_matches(p, enode, env)
-                    if matches:
-                        return True, new_env
-                return False, env
+                    for env in envs:
+                        matches, new_envs = enode_matches(p, enode, [env])
+                        if matches:
+                            matched = True
+                            matched_envs.extend(new_envs)
+                return matched, matched_envs
 
         matches = []
         for eid in eclasses.keys():
-            match, env = match_in(pattern, eid, {})
+            match, envs = match_in(pattern, eid, [{}])
             if match:
-                matches.append((eid, env))
+                matches.extend([(eid, env) for env in envs])
         return matches
 
     def _new_singleton_eclass(self):
@@ -172,7 +212,9 @@ class EGraph:
 
         :returns: the EClassID of the root node
         """
-        return self.add(ENode(node.value(), tuple(self.from_tree(n) for n in node.children())))
+        return self.add(
+            ENode(node.value(), tuple(self.from_tree(n) for n in node.children()))
+        )
 
     def merge(self, eclass1, eclass2):
         e1 = eclass1.find()
@@ -185,7 +227,7 @@ class EGraph:
         # Update uses of eclasses:
         # Maintain invariant that uses are recorded on the parent EClassID
         e2.uses += e1.uses
-        e1.uses = None  # TODO: should be [] instead?
+        e1.uses = []  # TODO: was None in original?
 
         # now that eclassid e2 is worklist, nodes in the hashcons may not be
         # canonicalized, and we might discover that 2 enodes are actually the
@@ -208,6 +250,7 @@ class EGraph:
         uses list.
         """
         assert eclassid.parent is None
+
         # reset uses of eclassid, repopulate at the end
         uses, eclassid.uses = eclassid.uses, []
 
@@ -230,7 +273,7 @@ class EGraph:
         # should be tied to the parent instead
         eclassid.find().uses += new_uses.items()
 
-    def apply_rules(self, rules: List["Rule"]):
+    def apply_rules(self, rules: List[Rule]):
         """
         :param rules: List[Rule]
         :returns: EGraph
@@ -273,10 +316,11 @@ class EGraph:
         :param env: Dict[str, EClassID]
         :returns: EClassID
         """
-        if not pattern.children() and not isinstance(pattern.value(), int):
+        if not pattern.children() and pattern.is_pattern_symbol():
             return env[pattern.value()]
         else:
             enode = ENode(
-                pattern.value(), tuple(self.subst(child, env) for child in pattern.children())
+                pattern.value(),
+                tuple(self.subst(child, env) for child in pattern.children()),
             )
             return self.add(enode)
