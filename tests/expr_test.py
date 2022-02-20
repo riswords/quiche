@@ -11,6 +11,7 @@ class ExprNode(NamedTuple):
     args: Tuple["ExprNode", ...]
 
     # overload some operators to allow us to easily construct these
+    @staticmethod
     def _mk_op(key: str):
         return lambda *args: ExprNode(
             key,
@@ -19,10 +20,17 @@ class ExprNode(NamedTuple):
             ),
         )
 
-    __add__ = _mk_op("+")
-    __mul__ = _mk_op("*")
-    __lshift__ = _mk_op("<<")
-    __truediv__ = _mk_op("/")
+    def __add__(self, other):
+        return ExprNode._mk_op("+")(self, other)
+
+    def __mul__(self, other):
+        return ExprNode._mk_op("*")(self, other)
+
+    def __lshift__(self, other):
+        return ExprNode._mk_op("<<")(self, other)
+
+    def __truediv__(self, other):
+        return ExprNode._mk_op("/")(self, other)
 
     # print it out like an s-expr
     def __repr__(self):
