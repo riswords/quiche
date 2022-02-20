@@ -147,7 +147,7 @@ class EGraph:
                         return False, [env]
                 return True, new_envs
 
-            if not p.children() and p.is_pattern_symbol():
+            if p.is_pattern_symbol():
                 # this is a leaf variable like ?x: match it with the env
                 id = p.value()
                 matched = False
@@ -316,7 +316,7 @@ class EGraph:
         :param env: Dict[str, EClassID]
         :returns: EClassID
         """
-        if not pattern.children() and pattern.is_pattern_symbol():
+        if pattern.is_pattern_symbol():
             return env[pattern.value()]
         else:
             enode = ENode(

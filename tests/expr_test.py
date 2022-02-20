@@ -55,7 +55,7 @@ class ExprTree(QuicheTree):
         return self._children
 
     def is_pattern_symbol(self):
-        return not isinstance(self.value(), int)
+        return not self.children() and not isinstance(self.value(), int)
 
     @staticmethod
     def make_rule(fn):
