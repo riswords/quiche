@@ -1,6 +1,7 @@
 from quiche.egraph import EGraph
+from quiche.analysis import MinimumCostExtractor
 
-from .prop_test_parser import PropParser, PropTree, PropTreeCost, PropTreeExtractor
+from .prop_test_parser import PropParser, PropTree, PropTreeCost
 
 from .test_egraph import verify_egraph_shape, print_egraph
 
@@ -215,12 +216,12 @@ def test_schedule_contrapositive():
         assert actual.version == version
         # Verify schedule-extracted term is correct
         cost_model = PropTreeCost()
-        cost_analysis = PropTreeExtractor(cost_model)
-        extracted = cost_analysis.schedule(actual, root)
+        cost_analysis = MinimumCostExtractor()
+        extracted = cost_analysis.schedule(cost_model, actual, root)
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.schedule(actual, root)) == best_terms[-1]
+    assert str(cost_analysis.schedule(cost_model, actual, root)) == best_terms[-1]
     expected = {
         "e5": {"y": [()], "~": [("e7",)]},
         "e7": {"~": [("e5",)]},

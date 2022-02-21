@@ -1,9 +1,9 @@
 from typing import Dict, NamedTuple, Tuple, Union
-import math
 
 from quiche.quiche_tree import QuicheTree
-from quiche.egraph import EGraph, EClassID, ENode
+from quiche.egraph import EClassID, ENode
 from quiche.rewrite import Rule
+from quiche.analysis import CostModel
 
 
 class ExprNode(NamedTuple):
@@ -71,7 +71,7 @@ class ExprTree(QuicheTree):
         return Rule(ExprTree(lhs), ExprTree(rhs))
 
 
-class ExprNodeCost:
+class ExprNodeCost(CostModel):
     """
     Simple cost model for ExprNodes:
 
@@ -119,40 +119,3 @@ class ExprNodeCost:
         return ExprNode(
             enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
         )
-
-
-class ExprNodeExtractor:
-    def __init__(self, cost_model: ExprNodeCost):
-        self.cost_model = cost_model
-
-    def schedule(self, egraph: EGraph, result: EClassID) -> ExprNode:
-        """
-        Extract lowest cost ENode from EGraph.
-        Calculate lowest cost for each node using `expr_costs` to weight each
-        operation.
-
-        :returns: lowest cost node
-        """
-        result = result.find()
-        eclasses = egraph.eclasses()
-        # TODO: initializing costs like this doesn't typecheck because inf is a
-        # float, and there is no maxint in python3. Rework so that
-        # uninitialized costs can be absent from `costs`. (NOTE: this might
-        # also help with the issue of eclasses containing enodes with the same
-        # key).
-        costs = {eid: (math.inf, None) for eid in eclasses.keys()}
-        changed = True
-
-        # iterate until saturation, taking lowest cost option
-        while changed:
-            changed = False
-            for eclass, enodes in eclasses.items():
-                new_cost = min(
-                    (self.cost_model.enode_cost_rec(enode, costs), enode)
-                    for enode in enodes
-                )
-                if costs[eclass][0] != new_cost[0]:
-                    changed = True
-                costs[eclass] = new_cost
-
-        return self.cost_model.extract(result, costs)

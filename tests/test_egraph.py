@@ -2,8 +2,10 @@ from typing import Dict, List
 
 from quiche.egraph import EGraph
 from quiche.rewrite import Rule
+from quiche.analysis import MinimumCostExtractor
 
-from .expr_test import ExprNode, ExprNodeCost, ExprNodeExtractor, ExprTree
+from .expr_test import ExprNode, ExprNodeCost, ExprTree
+
 
 
 def exp(fn):
@@ -208,12 +210,12 @@ def test_schedule():
         assert actual.version == version
         # Verify schedule-extracted term is correct
         cost_model = ExprNodeCost()
-        cost_analysis = ExprNodeExtractor(cost_model)
-        extracted = cost_analysis.schedule(actual, root)
+        cost_analysis = MinimumCostExtractor()
+        extracted = cost_analysis.schedule(cost_model, actual, root)
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.schedule(actual, root)) == best_terms[-1]
+    assert str(cost_analysis.schedule(cost_model, actual, root)) == best_terms[-1]
     expected = {
         "e0": {"a": [()], "/": [("e5", "e1")], "*": [("e0", "e4")]},
         "e1": {"2": [()]},
@@ -228,10 +230,10 @@ def run_test():
     root = eg.from_tree(ExprTree(times_divide()))
     rules = make_rules()
     cost_model = ExprNodeCost()
-    cost_analysis = ExprNodeExtractor(cost_model)
+    cost_analysis = MinimumCostExtractor()
     while True:
         version = eg.version
-        print("BEST: ", cost_analysis.schedule(eg, root))
+        print("BEST: ", cost_analysis.schedule(cost_model, eg, root))
         eg.apply_rules(rules)
         if version == eg.version:
             break

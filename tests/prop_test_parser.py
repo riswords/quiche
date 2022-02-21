@@ -1,9 +1,9 @@
 from typing import Dict, Tuple, Union
-import math
 
 from quiche.rewrite import Rule
-from quiche.egraph import ENode, EClassID, EGraph
+from quiche.egraph import ENode, EClassID
 from quiche.quiche_tree import QuicheTree
+from quiche.analysis import CostModel
 
 from .prop_test_lexer import PropLexer
 
@@ -36,7 +36,7 @@ class PropTree(QuicheTree):
         return Rule(PropTree.parse(lhs), PropTree.parse(rhs))
 
 
-class PropTreeCost:
+class PropTreeCost(CostModel):
     """
     Simple cost model for PropTree nodes:
 
@@ -76,38 +76,6 @@ class PropTreeCost:
     ) -> ENode:
         enode = costs[eclassid][1]
         return ENode(enode.key, tuple(self.extract(eid, costs) for eid in enode.args))
-
-
-class PropTreeExtractor:
-    def __init__(self, cost_model: PropTreeCost):
-        self.cost_model = cost_model
-
-    def schedule(self, egraph: EGraph, result: EClassID) -> ENode:
-        """
-        Extract lowest cost ENode from EGraph.
-        Calculate lowest cost for each node using `prop_costs` to weight each
-        operation.
-
-        :returns: lowest cost node
-        """
-        result = result.find()
-        eclasses = egraph.eclasses()
-        costs = {eid: (math.inf, None) for eid in eclasses.keys()}
-        changed = True
-
-        # iterate until saturation, taking lowest cost option
-        while changed:
-            changed = False
-            for eclass, enodes in eclasses.items():
-                new_cost = min(
-                    (self.cost_model.enode_cost_rec(enode, costs), enode)
-                    for enode in enodes
-                )
-                if costs[eclass][0] != new_cost[0]:
-                    changed = True
-                costs[eclass] = new_cost
-
-        return self.cost_model.extract(result, costs)
 
 
 class PropParser(object):
