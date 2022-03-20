@@ -1,4 +1,4 @@
-from typing import Dict, NamedTuple, Tuple, Union
+from typing import Dict, NamedTuple, Tuple, Union, List
 
 from quiche.quiche_tree import QuicheTree
 from quiche.egraph import EClassID, ENode
@@ -66,6 +66,12 @@ class ExprTree(QuicheTree):
         return not self.children() and not isinstance(self.value(), int)
 
     @staticmethod
+    def make_node(key: Union[str, int], children: List["ExprTree"]) -> "ExprTree":
+        tree = ExprTree(ExprNode(key, ()))
+        tree._children = children
+        return tree
+
+    @staticmethod
     def make_rule(fn):
         lhs, rhs = ExprNode.exp(fn)
         return Rule(ExprTree(lhs), ExprTree(rhs))
@@ -114,8 +120,6 @@ class ExprNodeCost(CostModel):
 
     def extract(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
-    ) -> ExprNode:
+    ) -> ExprTree:
         enode = costs[eclassid][1]
-        return ExprNode(
-            enode.key, tuple(self.extract(eid, costs) for eid in enode.args)
-        )
+        return ExprTree.make_node(enode.key, [self.extract(eid, costs) for eid in enode.args])

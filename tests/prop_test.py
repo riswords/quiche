@@ -3,7 +3,7 @@ from quiche.analysis import MinimumCostExtractor
 
 from .prop_test_parser import PropParser, PropTree, PropTreeCost
 
-from .test_egraph import verify_egraph_shape, print_egraph
+from .test_egraph import verify_egraph_shape  # , print_egraph
 
 
 def make_rules():
@@ -43,21 +43,14 @@ def not_y_implies_not_x():
 
 def test_implies():
     """Test building egraph of x -> y"""
-    tree = x_implies_y()
-
-    actual = EGraph()
-    actual.from_tree(tree)
-
+    actual = EGraph(x_implies_y())
     expected = {"e0": {"x": [()]}, "e1": {"y": [()]}, "e2": {"->": [("e0", "e1")]}}
     assert verify_egraph_shape(actual, expected)
 
 
 def test_nor():
     """Test building egraph of ~x | y"""
-    tree = not_x_or_y()
-    actual = EGraph()
-    actual.from_tree(tree)
-
+    actual = EGraph(not_x_or_y())
     expected = {
         "e0": {"x": [()]},
         "e1": {"~": [("e0",)]},
@@ -69,9 +62,8 @@ def test_nor():
 
 def test_add_implies_and_nor():
     """Test building egraph of both props: x -> y and ~x | y"""
-    actual = EGraph()
-    actual.from_tree(x_implies_y())
-    actual.from_tree(not_x_or_y())
+    actual = EGraph(x_implies_y())
+    actual.add(not_x_or_y())
     actual.rebuild()
 
     expected = {
@@ -90,8 +82,7 @@ def test_and_or_not_implies():
     parser.build()
     tree = parser.parse(test_str)
 
-    actual = EGraph()
-    actual.from_tree(tree)
+    actual = EGraph(tree)
 
     expected = {
         "e0": {"x": [()]},
@@ -106,9 +97,9 @@ def test_and_or_not_implies():
 
 
 def test_merge_props():
-    actual = EGraph()
-    impl_root = actual.from_tree(x_implies_y())
-    nor_root = actual.from_tree(not_x_or_y())
+    actual = EGraph(x_implies_y())
+    impl_root = actual.root
+    nor_root = actual.add(not_x_or_y())
     actual.merge(impl_root, nor_root)
     actual.rebuild()
 
@@ -128,8 +119,7 @@ def test_prop_ematch():
     parser.build()
     tree = parser.parse(test_str)
 
-    actual = EGraph()
-    _ = actual.from_tree(tree)
+    actual = EGraph(tree)
 
     # Verify tree shape
     expected = {
@@ -159,9 +149,9 @@ def test_prop_ematch():
 
 
 def test_expr_subst():
-    actual = EGraph()
-    impl_root = actual.from_tree(x_implies_y())
-    nor_root = actual.from_tree(not_x_or_y())
+    actual = EGraph(x_implies_y())
+    impl_root = actual.root
+    nor_root = actual.add(not_x_or_y())
     actual.merge(impl_root, nor_root)
     actual.rebuild()
 
@@ -182,8 +172,7 @@ def test_expr_subst():
 
 
 def test_apply_rules_for_contrapositive():
-    actual = EGraph()
-    _ = actual.from_tree(x_implies_y())
+    actual = EGraph(x_implies_y())
     rules = make_rules()
     versions = [3, 14, 16, 24]
     for version in versions:
@@ -207,8 +196,8 @@ def test_apply_rules_for_contrapositive():
 
 def test_schedule_contrapositive():
     # Verify rule application
-    actual = EGraph()
-    root = actual.from_tree(not_y_implies_not_x())
+    actual = EGraph(not_y_implies_not_x())
+    root = actual.root
     rules = make_rules()
     versions = [5, 18, 20, 28]
     best_terms = ["(-> (~ y) (~ x))", "(| y (~ x))", "(| y (~ x))", "(-> x y)"]

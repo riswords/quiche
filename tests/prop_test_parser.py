@@ -53,7 +53,7 @@ class PropTreeCost(CostModel):
             "->": 3,
         }
 
-    def enode_cost(self, node: ENode, costs: Dict[EClassID, int]) -> int:
+    def enode_cost(self, node: ENode, costs: Dict[EClassID, Tuple[int, ENode]]) -> int:
         """
         Calculate the cost of a node based solely on its key (not its children)
         """
@@ -73,9 +73,9 @@ class PropTreeCost(CostModel):
 
     def extract(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
-    ) -> ENode:
+    ) -> PropTree:
         enode = costs[eclassid][1]
-        return ENode(enode.key, tuple(self.extract(eid, costs) for eid in enode.args))
+        return PropTree(enode.key, tuple(self.extract(eid, costs) for eid in enode.args))
 
 
 class PropParser(object):

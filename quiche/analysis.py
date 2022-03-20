@@ -3,6 +3,7 @@ from math import inf
 from typing import Dict, Tuple
 
 from quiche.egraph import EGraph, EClassID, ENode
+from quiche.quiche_tree import QuicheTree
 
 
 class CostModel(ABC):
@@ -32,13 +33,13 @@ class CostModel(ABC):
     @abstractmethod
     def extract(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
-    ) -> ENode:
+    ) -> QuicheTree:
         """
-        Extract the lowest cost ENode from the EClassID.
+        Extract a QuicheTree corresponding to the lowest cost ENode from the EClassID.
 
         :param eclassid: eclassid to extract from
         :param costs: dictionary from EClassID to a (cost, ENode) tuple
-        :returns: lowest cost ENode
+        :returns: QuicheTree corresponding to the lowest cost ENode
         """
         pass
 
@@ -47,9 +48,10 @@ class CostExtractor(ABC):
     @abstractmethod
     def schedule(
         self, cost_model: CostModel, egraph: EGraph, result: EClassID
-    ) -> ENode:
+    ) -> QuicheTree:
         """
-        Extract the "best" ENode from the  EGraph, based on a cost model.
+        Extract the QuicheTree for the "best" ENode from the  EGraph,
+        based on a cost model.
 
         :param cost_model: CostModel to use for cost calculations
         :param egraph: EGraph from which to extract
@@ -62,7 +64,7 @@ class CostExtractor(ABC):
 class MinimumCostExtractor(CostExtractor):
     def schedule(
         self, cost_model: CostModel, egraph: EGraph, result: EClassID
-    ) -> ENode:
+    ) -> QuicheTree:
         """
         Extract lowest cost ENode from EGraph.
         Calculate lowest cost for each node using `costs` to weight each

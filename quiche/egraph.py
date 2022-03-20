@@ -78,7 +78,7 @@ class ENode(NamedTuple):
 
 
 class EGraph:
-    def __init__(self):
+    def __init__(self, tree: QuicheTree = None):
         self.id_counter = 0
 
         # quickly check whether the egraph has mutated
@@ -86,10 +86,59 @@ class EGraph:
 
         # dict<ENode_canon, EClassID_noncanon> for checking if an enode is
         # already defined
-        self.hashcons = {}
+        self.hashcons: Dict[ENode, EClassID] = {}
 
         # List<EClassID> of eclasses mutated by a merge, used for `rebuild`
-        self.worklist = []
+        self.worklist: List[EClassID] = []
+
+        self.root = None
+        if tree is not None:
+            self.root = self.add(tree)
+
+    def _repr_svg_(self):
+        from graphviz import Digraph
+
+        def format_record(x):
+            if isinstance(x, list):
+                return '{' + '|'.join(format_record(e) for e in x) + '}'
+            else:
+                return x
+
+        def escape(x):
+            escapes = [('|', '\\|'),
+                       ('<', '\\<'),
+                       ('>', '\\>')]
+            x = str(x)
+            for old, new in escapes:
+                x = x.replace(old, new)
+            # return str(x).replace('|', '\\|').replace('<', '\\<').replace('>', '\\>')
+            return x
+
+        graph = Digraph(node_attr={'shape': 'record', 'height': '.1'})
+        for eclass, enodes in self.eclasses().items():
+            graph.node(f'{eclass.id}', label=f'e{eclass.id}', shape='circle')
+
+            for enode in enodes:
+                enode_id = str(id(enode))
+                graph.edge(f'{eclass.id}', enode_id)
+
+                record = [escape(enode.key)]
+                for i, arg in enumerate(enode.args):
+                    graph.edge(f'{enode_id}:p{i}', f'{arg.id}')
+                    record.append(f'<p{i}>')
+                graph.node(enode_id, label='|'.join(record))
+        return graph._repr_image_svg_xml()
+
+    def write_to_svg(self, filename: str):
+        """
+        Write e-graph to file in SVG format.
+
+        :param filename: filename to write
+        :return: None
+        """
+        svg_xml = self._repr_svg_()
+        with open(filename, "w") as f:
+            f.write(svg_xml)
 
     def is_saturated_or_timeout(self):
         pass
@@ -189,7 +238,7 @@ class EGraph:
         self.id_counter += 1
         return singleton
 
-    def add(self, enode: ENode):
+    def add_enode(self, enode: ENode):
         enode = enode.canonicalize()
         eclassid = self.hashcons.get(enode, None)
         if eclassid is None:
@@ -202,18 +251,15 @@ class EGraph:
         # rhs of hashcons isn't canonicalized, so do that now
         return eclassid.find()
 
-    def from_tree(self, node: QuicheTree):
+    def add(self, node: QuicheTree):
         """
-        Construct an EGraph from a tree.
+        Add a new node to the EGraph.
 
-        :param node: a "tree node"-like object where node implements functions
-        `value()` to get the node's value and `children()` to get the node's
-        children.
-
-        :returns: the EClassID of the root node
+        :param node: a QuicheTree node
+        :returns: the EClassID of the new ENode
         """
-        return self.add(
-            ENode(node.value(), tuple(self.from_tree(n) for n in node.children()))
+        return self.add_enode(
+            ENode(node.value(), tuple(self.add(n) for n in node.children()))
         )
 
     def merge(self, eclass1, eclass2):
@@ -323,4 +369,4 @@ class EGraph:
                 pattern.value(),
                 tuple(self.subst(child, env) for child in pattern.children()),
             )
-            return self.add(enode)
+            return self.add_enode(enode)

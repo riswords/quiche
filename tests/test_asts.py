@@ -100,9 +100,8 @@ def test_make_rule2():
 
 
 def test_ematch_rule1():
-    actual = EGraph()
     quiche_tree = setup_tree()
-    actual.from_tree(quiche_tree)
+    actual = EGraph(quiche_tree)
     rule = make_rule_1()
 
     match = actual.ematch(rule.lhs, actual.eclasses())
@@ -113,9 +112,8 @@ def test_ematch_rule1():
 
 
 def test_ematch_rule2():
-    actual = EGraph()
     quiche_tree = setup_tree()
-    actual.from_tree(quiche_tree)
+    actual = EGraph(quiche_tree)
     rule = make_rule_2()
 
     match = actual.ematch(rule.lhs, actual.eclasses())
@@ -126,9 +124,8 @@ def test_ematch_rule2():
 
 
 def test_apply_rule1():
-    actual = EGraph()
     quiche_tree = setup_tree()
-    actual.from_tree(quiche_tree)
+    actual = EGraph(quiche_tree)
     rule = make_rule_1()
 
     actual.apply_rules([rule])
