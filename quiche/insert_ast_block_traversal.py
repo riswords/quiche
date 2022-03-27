@@ -132,6 +132,52 @@ class IdentifierSequence(AST, QuicheBlock):
         self.ids: List[str] = ids
 
 
+class RemoveASTBlockTraversal(NodeTransformer):
+    def visit_StmtSequence(self, node: StmtSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_ExprSequence(self, node: ExprSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_KeywordSequence(self, node: KeywordSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_WithItemSequence(self, node: WithItemSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_ExceptHandlerSequence(self, node: ExceptHandlerSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_AliasSequence(self, node: AliasSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_ComprehensionSequence(self, node: ComprehensionSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_CmpOpSequence(self, node: CmpOpSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_SliceSequence(self, node: SliceSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_ArgSequence(self, node: ArgSequence):
+        self.generic_visit(node)
+        return node.body
+
+    def visit_IdentifierSequence(self, node: IdentifierSequence):
+        self.generic_visit(node)
+        return node.ids
+
+
 class InsertASTBlockTraversal(NodeTransformer):
     def visit_Module(self, node: Module) -> Module:
         # Short-circuit: assume if the body is a StmtSequence, it's already
