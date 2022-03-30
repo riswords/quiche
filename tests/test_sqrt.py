@@ -26,7 +26,7 @@ def math_sqrt(number):
 
 def test_newton_1():
     number = math.factorial(169)
-    assert abs(newton(number) - math_sqrt(number)) < 0.00001
+    assert abs(newton(number) - math_sqrt(number)) < 1e-05
 
 
 def test_newton_2():

@@ -35,20 +35,30 @@ class ASTQuicheTree(QuicheTree):
     def from_ast(self, tree: AST) -> None:
         self.root = tree
         self._children = []
-        if hasattr(self.root, "_fields"):
-            for field in self.root._fields:
-                if hasattr(self.root, field):
-                    child = getattr(self.root, field)
-                    if isinstance(child, List):
-                        self._children.extend([ASTQuicheTree(root=c) for c in child])
+        if not ASTQuicheTree.is_primitive_type(type(self.root)):
+            if hasattr(self.root, "_fields"):
+                for field in self.root._fields:
+                    if hasattr(self.root, field):
+                        child = getattr(self.root, field)
+                        if isinstance(child, List):
+                            self._children.extend([ASTQuicheTree(root=c) for c in child])
+                        else:
+                            self._children.append(ASTQuicheTree(root=child))
                     else:
-                        self._children.append(ASTQuicheTree(root=child))
-                else:
-                    self._children.append(ASTQuicheTree(root=None))
+                        self._children.append(ASTQuicheTree(root=None))
 
     def value(self):
         root_type = type(self.root)
-        if self.root is None or root_type in (str, int, bool, float):
+        # Primitive wrappers (e.g., Str, Name)
+        if ASTQuicheTree.is_primitive_type(root_type):
+            children = [root_type]
+            if hasattr(self.root, "_fields"):
+                for field in self.root._fields:
+                    if hasattr(self.root, field):
+                        children.append(getattr(self.root, field))
+            return tuple(children)
+        # identifiers
+        elif root_type is str:
             return self.root
         else:
             return root_type
@@ -70,6 +80,10 @@ class ASTQuicheTree(QuicheTree):
         return False
 
     @staticmethod
+    def is_primitive_type(node_type):
+        return node_type in [ast.Num, ast.Str, ast.Bytes, ast.NameConstant, ast.Name]
+
+    @staticmethod
     def make_rule(lhs, rhs):
         from ast import parse, fix_missing_locations
         from quiche.rewrite import Rule
@@ -86,29 +100,41 @@ class ASTQuicheTree(QuicheTree):
     @staticmethod
     # TODO: This is kind of a mess - we should definitely clean this up...
     def make_node(node_type, children: List["ASTQuicheTree"]) -> "ASTQuicheTree":
-        if node_type is type(None) or node_type is None:
-            return ASTQuicheTree(root=None)
-        elif type(node_type) in [str, int, bool, float]:
-            print("MAKING NODE OF TYPE: {} WITH ROOT: {}".format(type(node_type), node_type))
+        def is_leaf(node_type):
+            return node_type in [
+                ast.Load, ast.Store, ast.Del, ast.AugLoad, ast.AugStore,
+                ast.Param, ast.And, ast.Or, ast.Add, ast.Sub, ast.Mult,
+                ast.MatMult, ast.Div, ast.Mod, ast.Pow, ast.LShift, ast.RShift,
+                ast.BitOr, ast.BitXor, ast.BitAnd, ast.FloorDiv, ast.Invert,
+                ast.Not, ast.UAdd, ast.USub, ast.Eq, ast.NotEq, ast.Lt,
+                ast.LtE, ast.Gt, ast.GtE, ast.Is, ast.IsNot, ast.In, ast.NotIn]
+        # identifiers
+        if type(node_type) is str:
             return ASTQuicheTree(root=node_type)
+        # primitive wrappers (e.g., Str, Name)
+        elif type(node_type) is tuple:
+            ast_type = node_type[0]
+            args = node_type[1:]
+            return ASTQuicheTree(root=ast_type(*args))
+        # none type
+        elif issubclass(node_type, type(None)):
+            return ASTQuicheTree(root=None)
+        # QuicheBlocks
         elif issubclass(node_type, QuicheBlock):
             child_roots = [c.root for c in children]
             return ASTQuicheTree(root=node_type(child_roots))
+        # Already wrapped in a QuicheTree
         elif isinstance(node_type, ASTQuicheTree):
             return node_type
         else:
             if children:
-                args = [c.root for c in children]
-                if node_type in [ast.Num]:
-                    print("MAKING NODE OF TYPE: {} WITH ARGS: {}, CHILD VAL: {}".format(node_type, args, children[0].value()))
+                args = tuple([c.root for c in children])
                 return ASTQuicheTree(root=node_type(*args))
-            elif node_type in [ast.Load, ast.Store, ast.Del, ast.AugLoad, ast.AugStore, ast.Param,
-                    ast.And, ast.Or, ast.Add, ast.Sub, ast.Mult, ast.MatMult, ast.Div, ast.Mod,
-                    ast.Pow, ast.LShift, ast.RShift, ast.BitOr, ast.BitXor, ast.BitAnd, ast.FloorDiv,
-                    ast.Invert, ast.Not, ast.UAdd, ast.USub,
-                    ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Is, ast.IsNot, ast.In, ast.NotIn]:
+            elif is_leaf(node_type):
+                # node_type with no children
                 return ASTQuicheTree(root=node_type())
             else:
+                # node type with one child: None
                 return ASTQuicheTree(root=node_type(None))
 
     def to_source_string(self):
