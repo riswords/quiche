@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quiche"
+description = "Quiche: E-Graphs for Python"
+classifiers = [
+  "Programming Language :: Python :: 3.7",
+  "License :: OSI Approved :: MIT License",
+]
+readme = "README.md"
+license = {text = "MIT"}
+dependencies = [
+  "astor"
+]
+dynamic = ["version", "urls", "authors"]
