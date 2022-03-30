@@ -330,11 +330,11 @@ class EGraph:
         for rule in rules:
             for eid, env in self.ematch(rule.lhs, canonical_eclasses):
                 matches.append((rule, eid, env))
-        print(f"VERSION {self.version}")
+        # print(f"VERSION {self.version}")
         for rule, eid, env in matches:
             new_eid = self.subst(rule.rhs, env)
-            if eid is not new_eid:
-                print(f"{eid} MATCHED {rule} with {env}")
+            # if eid is not new_eid:
+            #     print(f"{eid} MATCHED {rule} with {env}")
             self.merge(eid, new_eid)
         self.rebuild()
         return self
