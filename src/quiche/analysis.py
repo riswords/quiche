@@ -31,13 +31,13 @@ class CostModel(ABC):
         pass
 
     @abstractmethod
-    def extract(
+    def lookup(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
     ) -> QuicheTree:
         """
-        Extract a QuicheTree corresponding to the lowest cost ENode from the EClassID.
+        Look up a QuicheTree corresponding to the lowest cost ENode from the EClassID.
 
-        :param eclassid: eclassid to extract from
+        :param eclassid: eclassid to look up
         :param costs: dictionary from EClassID to a (cost, ENode) tuple
         :returns: QuicheTree corresponding to the lowest cost ENode
         """
@@ -93,7 +93,7 @@ class MinimumCostExtractor(CostExtractor):
                     changed = True
                 costs[eclass] = new_cost
 
-        return cost_model.extract(result, costs)
+        return cost_model.lookup(result, costs)
 
 
 # class EClassAnalysis(ABC):

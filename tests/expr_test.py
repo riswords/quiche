@@ -118,8 +118,8 @@ class ExprNodeCost(CostModel):
         """
         return self.enode_cost(enode, costs) + sum(costs[eid][0] for eid in enode.args)
 
-    def extract(
+    def lookup(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
     ) -> ExprTree:
         enode = costs[eclassid][1]
-        return ExprTree.make_node(enode.key, [self.extract(eid, costs) for eid in enode.args])
+        return ExprTree.make_node(enode.key, [self.lookup(eid, costs) for eid in enode.args])

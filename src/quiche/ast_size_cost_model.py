@@ -28,8 +28,8 @@ class ASTSizeCostModel(CostModel):
         child_costs = sum(costs[eid][0] for eid in enode.args)
         return self.enode_cost(enode, costs) + child_costs
 
-    def extract(
+    def lookup(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
     ) -> ASTQuicheTree:
         enode = costs[eclassid][1]
-        return ASTQuicheTree.make_node(enode.key, [self.extract(eid, costs) for eid in enode.args])
+        return ASTQuicheTree.make_node(enode.key, [self.lookup(eid, costs) for eid in enode.args])
