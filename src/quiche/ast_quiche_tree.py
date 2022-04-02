@@ -160,5 +160,4 @@ class ASTQuicheTree(QuicheTree):
 
     def to_file(self, filename):
         with open(filename, "w") as f:
-            source = self.to_source_string()
-            f.write(to_source(source))
+            f.write(self.to_source_string())
