@@ -154,7 +154,7 @@ def test_extract_identity():
     cost_model = ASTSizeCostModel()
     extractor = MinimumCostExtractor()
     # print("ECLASSES: ", actual.eclasses())
-    extracted = extractor.schedule(cost_model, eg, root)
+    extracted = extractor.extract(cost_model, eg, root)
     actual = extracted.to_source_string()
     assert expected == actual
 
@@ -171,7 +171,7 @@ def test_extract_rule1():
     root = eg.root
     cost_model = ASTHeuristicCostModel()
     extractor = MinimumCostExtractor()
-    extracted = extractor.schedule(cost_model, eg, root)
+    extracted = extractor.extract(cost_model, eg, root)
     actual_lines = extracted.to_source_string().splitlines()
 
     for idx, (act, exp) in enumerate(zip(actual_lines, expected_lines)):

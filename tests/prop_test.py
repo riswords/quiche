@@ -194,7 +194,7 @@ def test_apply_rules_for_contrapositive():
     assert verify_egraph_shape(actual, expected)
 
 
-def test_schedule_contrapositive():
+def test_extract_contrapositive():
     # Verify rule application
     actual = EGraph(not_y_implies_not_x())
     root = actual.root
@@ -203,14 +203,14 @@ def test_schedule_contrapositive():
     best_terms = ["(-> (~ y) (~ x))", "(| y (~ x))", "(| y (~ x))", "(-> x y)"]
     for version, term in zip(versions, best_terms):
         assert actual.version == version
-        # Verify schedule-extracted term is correct
+        # Verify extracted term is correct
         cost_model = PropTreeCost()
         cost_analysis = MinimumCostExtractor()
-        extracted = cost_analysis.schedule(cost_model, actual, root)
+        extracted = cost_analysis.extract(cost_model, actual, root)
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.schedule(cost_model, actual, root)) == best_terms[-1]
+    assert str(cost_analysis.extract(cost_model, actual, root)) == best_terms[-1]
     expected = {
         "e5": {"y": [()], "~": [("e7",)]},
         "e7": {"~": [("e5",)]},

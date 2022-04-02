@@ -181,7 +181,7 @@ def test_apply_rules():
     assert verify_egraph_shape(actual, expected)
 
 
-def test_schedule():
+def test_extract():
     # Verify rule application
     actual = EGraph(ExprTree(times_divide()))
     root = actual.root
@@ -199,14 +199,14 @@ def test_schedule():
     best_terms = ["(/ (* a 2) 2)", "(/ (<< a 1) 2)", "(* a 1)", "a"]
     for version, term in zip(versions, best_terms):
         assert actual.version == version
-        # Verify schedule-extracted term is correct
+        # Verify extracted term is correct
         cost_model = ExprNodeCost()
         cost_analysis = MinimumCostExtractor()
-        extracted = cost_analysis.schedule(cost_model, actual, root)
+        extracted = cost_analysis.extract(cost_model, actual, root)
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.schedule(cost_model, actual, root)) == best_terms[-1]
+    assert str(cost_analysis.extract(cost_model, actual, root)) == best_terms[-1]
     expected = {
         "e0": {"a": [()], "/": [("e5", "e1")], "*": [("e0", "e4")]},
         "e1": {"2": [()]},
@@ -224,7 +224,7 @@ def run_test():
     cost_analysis = MinimumCostExtractor()
     while True:
         version = eg.version
-        print("BEST: ", cost_analysis.schedule(cost_model, eg, root))
+        print("BEST: ", cost_analysis.extract(cost_model, eg, root))
         eg.apply_rules(rules)
         if version == eg.version:
             break

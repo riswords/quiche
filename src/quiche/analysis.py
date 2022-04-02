@@ -46,7 +46,7 @@ class CostModel(ABC):
 
 class CostExtractor(ABC):
     @abstractmethod
-    def schedule(
+    def extract(
         self, cost_model: CostModel, egraph: EGraph, result: EClassID
     ) -> QuicheTree:
         """
@@ -62,7 +62,7 @@ class CostExtractor(ABC):
 
 
 class MinimumCostExtractor(CostExtractor):
-    def schedule(
+    def extract(
         self, cost_model: CostModel, egraph: EGraph, result: EClassID
     ) -> QuicheTree:
         """
