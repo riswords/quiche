@@ -6,6 +6,8 @@ import quiche.insert_ast_block_traversal as ASTQT
 from quiche.ast_size_cost_model import ASTSizeCostModel
 from quiche.analysis import MinimumCostExtractor
 
+from quiche.ast_heuristic_cost_model import ASTHeuristicCostModel
+
 
 def setup_tree():
     tree_root = ASTQuicheTree("tests/test_sqrt.py")
@@ -140,7 +142,7 @@ def test_apply_rule1():
     rule = make_rule_1()
 
     actual.apply_rules([rule])
-    assert actual.version == 135
+    assert actual.version == 134
 
 
 def test_extract_identity():
@@ -159,27 +161,22 @@ def test_extract_identity():
 
 def test_extract_rule1():
     quiche_tree = setup_tree()
-    # with open("tests/test_sqrt.py", "r") as f:
-    #     expected_lines = f.read().splitlines()
+    with open("tests/test_sqrt.py", "r") as f:
+        expected_lines = f.read().splitlines()
     eg = EGraph(quiche_tree)
     rule = make_rule_1()
     eg.apply_rules([rule])
-    assert eg.version == 135
+    assert eg.version == 134
 
     root = eg.root
-    cost_model = ASTSizeCostModel()
+    cost_model = ASTHeuristicCostModel()
     extractor = MinimumCostExtractor()
     extracted = extractor.schedule(cost_model, eg, root)
-    return extracted
-    # actual_lines = extracted.to_source_string().splitlines()
+    actual_lines = extracted.to_source_string().splitlines()
 
-    # for idx, (act, exp) in enumerate(zip(actual_lines, expected_lines)):
-    #     if idx != 10:
-    #         print("INDEX: ", idx)
-    #         assert act == exp
-    #     else:
-    #         assert act == "    while 1:"
-    #         assert exp == "    while True:"
-
-    # TODO: problem with extracted2 body of while missing if, assign
-    # Possibly related to issue above
+    for idx, (act, exp) in enumerate(zip(actual_lines, expected_lines)):
+        if idx != 10:
+            assert act == exp
+        else:
+            assert act == "    while 1:"
+            assert exp == "    while True:"

@@ -17,12 +17,15 @@ class ASTQuicheTree(QuicheTree):
     def __init__(self, src_file: str = None, root: AST = None):
         self.root: Optional[AST] = root
         self._children: List[ASTQuicheTree] = []
+        self._is_pattern_symbol: bool = False
         if src_file is not None:
             self.from_file(src_file)
             if root is not None:
                 print("WARNING [ASTQuicheTree]: source file and AST are both specified. Ignoring AST.")
         elif root is not None:
             self.from_ast(root)
+
+        self.__init_pattern_symbol()
 
     @staticmethod
     def parse_file(filename) -> AST:
@@ -66,18 +69,32 @@ class ASTQuicheTree(QuicheTree):
     def children(self):
         return self._children
 
-    def is_pattern_symbol(self):
+    def __init_pattern_symbol(self):
         """
-        A pattern symbol is an AST.Expr containing an AST.Str or
-        AST.Name (i.e., variable reference) that starts with "__quiche__",
-        e.g., "__quiche__x".
+        Checks whether the root of this ASTQuicheTree is a pattern
+        symbol and caches to self._is_pattern_symbol.
+
+        A pattern symbol is one of:
+            - AST string or variable prefixed with "__quiche__" (i.e.,
+                an AST.Expr containing an AST.Str or AST.Name)
+            - A QuicheBlock with a single child that is a pattern symbol (this
+            allows us to match a body with one or more expressions)
         """
         if isinstance(self.root, Expr):
             if isinstance(self.root.value, Str):
-                return self.root.value.s.startswith("__quiche__")
+                self._is_pattern_symbol = self.root.value.s.startswith("__quiche__")
             elif isinstance(self.root.value, Name):
-                return self.root.value.id.startswith("__quiche__")
-        return False
+                self._is_pattern_symbol = self.root.value.id.startswith("__quiche__")
+        elif isinstance(self.root, QuicheBlock) and len(self.children()) == 1:
+            self._is_pattern_symbol = self.children()[0].is_pattern_symbol()
+        return
+
+    def is_pattern_symbol(self) -> bool:
+        """
+        Indicates whether the root of the ASTQuicheTree is a pattern
+        symbol. (See __init_pattern_symbol() for implementation details.)
+        """
+        return self._is_pattern_symbol
 
     @staticmethod
     def is_primitive_type(node_type):
