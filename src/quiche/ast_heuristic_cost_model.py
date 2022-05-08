@@ -109,7 +109,13 @@ class ASTHeuristicCostModel(CostModel):
             'IsNot': 1,
             'In': 1,
             'NotIn': 1,
-            'ExceptHandler': 1
+            'ExceptHandler': 1,
+            # special leaf kinds:
+            'int': 0,
+            'float': 1,
+            'bool': 2,
+            'complex': 3,
+            'str': 4,
         }
         if node_weights:
             self.node_weights.update(node_weights)
@@ -122,14 +128,13 @@ class ASTHeuristicCostModel(CostModel):
         if hasattr(node.key, '__name__'):
             key = node.key.__name__
         elif isinstance(node.key, tuple):
-            key = node.key[0].__name__ if hasattr(node.key[0], '__name__') else node.key[0]
+            key = node.key[0]
 
         if key in self.node_weights:
             return self.node_weights[key]
         elif node.key in self.node_weights:
             return self.node_weights[node.key]
-        else:
-            return 1
+        return 1
 
     def enode_cost_rec(
         self, enode: ENode, costs: Dict[EClassID, Tuple[int, ENode]]

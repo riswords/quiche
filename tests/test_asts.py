@@ -1,8 +1,9 @@
 import ast
+from sys import version_info
 
 from quiche.ast_quiche_tree import ASTQuicheTree
 from quiche.egraph import EGraph
-import quiche.insert_ast_block_traversal as ASTQT
+import quiche.pal.pal_block as ASTQT
 from quiche.ast_size_cost_model import ASTSizeCostModel
 from quiche.analysis import MinimumCostExtractor
 
@@ -36,18 +37,23 @@ def test_make_rule1():
     assert len(rule.lhs.children()) == 3
 
     # Verify LHS "True" structure: (NameConstant bool, value = True)
-    assert rule.lhs.children()[0].value() == (ast.NameConstant, True)
+    if version_info[:2] <= (3, 7):
+        assert rule.lhs.children()[0].value() == ("bool", ast.NameConstant, True)
+    elif version_info[:2] >= (3, 8):
+        assert rule.lhs.children()[0].value() == ("bool", ast.Constant, True, None)
 
-    # Verify LHS (StmtSequence (Expr (Name __quiche__body))) structure
+    # Verify LHS (StmtBlock (Expr (Name __quiche__body))) structure
     stmt_sequence = rule.lhs.children()[1]
-    assert stmt_sequence.value().__name__ == "StmtSequence"
+    assert stmt_sequence.value().__name__ == "StmtBlock"
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value().__name__ == "Expr"
     # assert stmt_sequence.children()[0].children()[0].value().__name__ == "Name"
-    assert stmt_sequence.children()[0].children()[0].value()[0] == ast.Name
-    assert stmt_sequence.children()[0].children()[0].value()[1] == "__quiche__body"
-    assert type(stmt_sequence.children()[0].children()[0].value()[2]) == ast.Load
-    assert stmt_sequence.children()[0].children()[0].root.id == "__quiche__body"
+    assert stmt_sequence.children()[0].children()[0].value()[:3] == ("name", ast.Name, "__quiche__body")
+    assert type(stmt_sequence.children()[0].children()[0].value()[3]) == ast.Load
+    assert stmt_sequence.children()[0].children()[0].root.kind == "name"
+    assert stmt_sequence.children()[0].children()[0].root.constr == ast.Name
+    assert stmt_sequence.children()[0].children()[0].root.args[0] == "__quiche__body"
+    assert type(stmt_sequence.children()[0].children()[0].root.args[1]) == ast.Load
 
     # Verify RHS type
     assert isinstance(rule.rhs, ASTQuicheTree)
@@ -55,17 +61,19 @@ def test_make_rule1():
     assert len(rule.rhs.children()) == 3
 
     # Verify RHS "1" structure: (Num int, value = 1)
-    assert rule.rhs.children()[0].value() == (ast.Num, 1)
     assert rule.rhs.children()[0].children() == []
+    if version_info[:2] <= (3, 7):
+        assert rule.rhs.children()[0].value() == ("int", ast.Num, 1)
+    elif version_info >= (3, 8):
+        assert rule.rhs.children()[0].value() == ("int", ast.Constant, 1, None)
 
-    # Verify RHS (StmtSequence (Expr (Name __quiche__body))) structure
+    # Verify RHS (StmtBlock (Expr (Name __quiche__body))) structure
     stmt_sequence = rule.rhs.children()[1]
-    assert stmt_sequence.value().__name__ == "StmtSequence"
+    assert stmt_sequence.value().__name__ == "StmtBlock"
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value().__name__ == "Expr"
-    assert stmt_sequence.children()[0].children()[0].value()[0] == ast.Name
-    assert stmt_sequence.children()[0].children()[0].value()[1] == "__quiche__body"
-    # assert stmt_sequence.children()[0].children()[0].root.id == "__quiche__body"
+    assert stmt_sequence.children()[0].children()[0].value()[:3] == ("name", ast.Name, "__quiche__body")
+    assert type(stmt_sequence.children()[0].children()[0].value()[3]) == ast.Load
 
 
 def test_make_rule2():
@@ -76,18 +84,28 @@ def test_make_rule2():
     assert len(rule.lhs.children()) == 3
 
     # Verify LHS "True" structure: (NameConstant bool, value = True)
-    assert rule.lhs.children()[0].value()[0] == ast.NameConstant
-    assert rule.lhs.children()[0].value()[1] is True
+    assert rule.lhs.children()[0].value()[0] == "bool"
+    if version_info[:2] <= (3, 7):
+        assert rule.lhs.children()[0].value()[1] == ast.NameConstant
+    elif version_info[:2] >= (3, 8):
+        assert rule.lhs.children()[0].value()[1] == ast.Constant
+    assert rule.lhs.children()[0].value()[2] is True
     assert rule.lhs.children()[1].children()[0].root.value
 
-    # Verify LHS (StmtSequence (Expr (Str __quiche__body))) structure
+    # Verify LHS (StmtBlock (Expr (Str __quiche__body))) structure
     stmt_sequence = rule.lhs.children()[1]
-    assert stmt_sequence.value() == ASTQT.StmtSequence
+    assert stmt_sequence.value() == ASTQT.StmtBlock
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value() == ast.Expr
-    assert stmt_sequence.children()[0].children()[0].value()[0] == ast.Str
-    assert stmt_sequence.children()[0].children()[0].value()[1] == "__quiche__body"
-    assert stmt_sequence.children()[0].children()[0].root.s == "__quiche__body"
+    if version_info[:2] <= (3, 7):
+        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Str, "__quiche__body")
+        assert stmt_sequence.children()[0].children()[0].root.constr == ast.Str
+        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body",)
+    elif version_info[:2] >= (3, 8):
+        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Constant, "__quiche__body", None)
+        assert stmt_sequence.children()[0].children()[0].root.kind == "str"
+        assert stmt_sequence.children()[0].children()[0].root.constr == ast.Constant
+        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body", None)
 
     # Verify RHS type
     assert isinstance(rule.rhs, ASTQuicheTree)
@@ -95,18 +113,32 @@ def test_make_rule2():
     assert len(rule.rhs.children()) == 3
 
     # Verify RHS "1" structure: (Num int, value = 1)
-    assert rule.rhs.children()[0].value()[0] == ast.Num
-    assert rule.rhs.children()[0].value()[1] == 1
-    assert rule.rhs.children()[0].root.n == 1
+    if version_info[:2] <= (3, 7):
+        assert rule.rhs.children()[0].value() == ("int", ast.Num, 1)
+        assert rule.rhs.children()[0].root.kind == "int"
+        assert rule.rhs.children()[0].root.constr == ast.Num
+        assert rule.rhs.children()[0].root.args == (1,)
+    elif version_info[:2] >= (3, 8):
+        assert rule.rhs.children()[0].value() == ("int", ast.Constant, 1, None)
+        assert rule.rhs.children()[0].root.kind == "int"
+        assert rule.rhs.children()[0].root.constr == ast.Constant
+        assert rule.rhs.children()[0].root.args == (1, None)
 
-    # Verify RHS (StmtSequence (Expr (Str __quiche__body))) structure
+    # Verify RHS (StmtBlock (Expr (Str __quiche__body))) structure
     stmt_sequence = rule.rhs.children()[1]
-    assert stmt_sequence.value() == ASTQT.StmtSequence
+    assert stmt_sequence.value() == ASTQT.StmtBlock
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value() == ast.Expr
-    assert stmt_sequence.children()[0].children()[0].value()[0] == ast.Str
-    assert stmt_sequence.children()[0].children()[0].value()[1] == "__quiche__body"
-    assert stmt_sequence.children()[0].children()[0].root.s == "__quiche__body"
+    if version_info[:2] <= (3, 7):
+        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Str, "__quiche__body")
+        assert stmt_sequence.children()[0].children()[0].root.kind == "str"
+        assert stmt_sequence.children()[0].children()[0].root.constr == ast.Str
+        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body",)
+    elif version_info[:2] >= (3, 8):
+        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Constant, "__quiche__body", None)
+        assert stmt_sequence.children()[0].children()[0].root.kind == "str"
+        assert stmt_sequence.children()[0].children()[0].root.constr == ast.Constant
+        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body", None)
 
 
 def test_ematch_rule1():
@@ -115,11 +147,11 @@ def test_ematch_rule1():
     rule = make_rule_1()
 
     match = actual.ematch(rule.lhs, actual.eclasses())
-    key = list(actual.eclasses().keys())[48]
+    key = list(actual.eclasses().keys())[52]
 
     assert match
     assert len(match) == 1
-    # print("MATCHED: ", match)
+    print("MATCHED: ", match)
     assert key in match[0]
 
 
@@ -129,7 +161,7 @@ def test_ematch_rule2():
     rule = make_rule_2()
 
     match = actual.ematch(rule.lhs, actual.eclasses())
-    key = list(actual.eclasses().keys())[48]
+    key = list(actual.eclasses().keys())[52]
 
     assert match
     assert len(match) == 1
@@ -142,7 +174,10 @@ def test_apply_rule1():
     rule = make_rule_1()
 
     actual.apply_rules([rule])
-    assert actual.version == 134
+    if version_info[:2] <= (3, 7):
+        assert actual.version == 145
+    else:
+        assert actual.version == 146
 
 
 def test_extract_identity():
@@ -166,7 +201,10 @@ def test_extract_rule1():
     eg = EGraph(quiche_tree)
     rule = make_rule_1()
     eg.apply_rules([rule])
-    assert eg.version == 134
+    if version_info[:2] <= (3, 7):
+        assert eg.version == 145
+    else:
+        assert eg.version == 146
 
     root = eg.root
     cost_model = ASTHeuristicCostModel()
