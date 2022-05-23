@@ -5,13 +5,18 @@ from quiche.ast_quiche_tree import ASTQuicheTree
 from quiche.egraph import EGraph
 import quiche.pal.pal_block as ASTQT
 from quiche.ast_size_cost_model import ASTSizeCostModel
+from quiche.ast_heuristic_cost_model import ASTHeuristicCostModel
+from quiche.ast_constant_folding import ASTConstantFolding
 from quiche.analysis import MinimumCostExtractor
 
-from quiche.ast_heuristic_cost_model import ASTHeuristicCostModel
 
-
-def setup_tree():
+def setup_sqrt_tree():
     tree_root = ASTQuicheTree("tests/test_sqrt.py")
+    return tree_root
+
+
+def setup_constant_folding_tree():
+    tree_root = ASTQuicheTree("tests/constant_folding.py")
     return tree_root
 
 
@@ -142,7 +147,7 @@ def test_make_rule2():
 
 
 def test_ematch_rule1():
-    quiche_tree = setup_tree()
+    quiche_tree = setup_sqrt_tree()
     actual = EGraph(quiche_tree)
     rule = make_rule_1()
 
@@ -156,7 +161,7 @@ def test_ematch_rule1():
 
 
 def test_ematch_rule2():
-    quiche_tree = setup_tree()
+    quiche_tree = setup_sqrt_tree()
     actual = EGraph(quiche_tree)
     rule = make_rule_2()
 
@@ -169,7 +174,7 @@ def test_ematch_rule2():
 
 
 def test_apply_rule1():
-    quiche_tree = setup_tree()
+    quiche_tree = setup_sqrt_tree()
     actual = EGraph(quiche_tree)
     rule = make_rule_1()
 
@@ -181,7 +186,7 @@ def test_apply_rule1():
 
 
 def test_extract_identity():
-    quiche_tree = setup_tree()
+    quiche_tree = setup_sqrt_tree()
     with open("tests/test_sqrt.py", "r") as f:
         expected = f.read()
     eg = EGraph(quiche_tree)
@@ -195,7 +200,7 @@ def test_extract_identity():
 
 
 def test_extract_rule1():
-    quiche_tree = setup_tree()
+    quiche_tree = setup_sqrt_tree()
     with open("tests/test_sqrt.py", "r") as f:
         expected_lines = f.read().splitlines()
     eg = EGraph(quiche_tree)
@@ -218,3 +223,48 @@ def test_extract_rule1():
         else:
             assert act == "    while 1:"
             assert exp == "    while True:"
+
+
+# Constant Folding
+def test_constant_folding():
+    tree = setup_constant_folding_tree()
+    with open("tests/constant_folding.py", "r") as f:
+        original_lines = f.read().splitlines()
+    analysis = ASTConstantFolding()
+    eg = EGraph(tree, analysis)
+
+    cost_model = ASTSizeCostModel()
+    extractor = MinimumCostExtractor()
+    extracted = extractor.extract(cost_model, eg, eg.root)
+    actual_lines = extracted.to_source_string().splitlines()
+
+    for idx, (res, pre) in enumerate(zip(actual_lines, original_lines)):
+        if idx == 9:
+            assert pre == "    return 1 + 2"
+            assert res == "    return 3"
+        elif idx == 17:
+            assert pre == "    return (1 + 2) + 3"
+            assert res == "    return 6"
+        elif idx == 21:
+            assert pre == "    return 1 + (2 + 3)"
+            assert res == "    return 6"
+        elif idx == 25:
+            assert pre == "    return 1 + 2 + 3 + 2"
+            assert res == "    return 8"
+        elif idx == 33:
+            assert pre == "    return 1 + 2 + x"
+            assert res == "    return 3 + x"
+        elif idx == 49:
+            assert pre == "    y = 5 - 2"
+            assert res == "    y = 3"
+        elif idx == 54:
+            assert pre == "    y = (5 - 4) - 3"
+            assert res == "    y = -2"
+        elif idx == 59:
+            assert pre == "    y = 5 - (4 - 3)"
+            assert res == "    y = 4"
+        elif idx == 69:
+            assert pre == "    y = x - (3 - 2)"
+            assert res == "    y = x - 1"
+        else:
+            assert res == pre, "Line {}: {} != {}".format(idx, res, pre)

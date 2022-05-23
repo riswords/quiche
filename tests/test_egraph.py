@@ -103,9 +103,9 @@ def test_merge_exprs():
     expected = {
         "e0": {"a": [()]},
         "e1": {"2": [()]},
-        "e3": {"/": [("e5", "e1")]},
+        "e2": {"<<": [("e0", "e4")], "*": [("e0", "e1")]},
+        "e3": {"/": [("e2", "e1")]},
         "e4": {"1": [()]},
-        "e5": {"<<": [("e0", "e4")], "*": [("e0", "e1")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -142,13 +142,15 @@ def test_expr_subst():
     lhs, env = matches[0]
     rhs = actual.subst(rule.rhs, env)
 
+    assert str(lhs) == "e3"
     assert str(rhs) == "e7"
+
     expected = {
         "e0": {"a": [()]},
         "e1": {"2": [()]},
-        "e3": {"/": [("e5", "e1")]},
+        "e2": {"<<": [("e0", "e4")], "*": [("e0", "e1")]},
+        "e3": {"/": [("e2", "e1")]},
         "e4": {"1": [()]},
-        "e5": {"<<": [("e0", "e4")], "*": [("e0", "e1")]},
         "e6": {"/": [("e1", "e1")]},
         "e7": {"*": [("e0", "e6")]},
     }
@@ -173,10 +175,10 @@ def test_apply_rules():
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
     expected = {
-        "e0": {"a": [()], "/": [("e5", "e1")], "*": [("e0", "e4")]},
+        "e0": {"a": [()], "/": [("e2", "e1")], "*": [("e0", "e4")]},
         "e1": {"2": [()]},
+        "e2": {"*": [("e0", "e1")], "<<": [("e0", "e4")]},
         "e4": {"1": [()], "/": [("e1", "e1")]},
-        "e5": {"*": [("e0", "e1")], "<<": [("e0", "e4")]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -202,16 +204,16 @@ def test_extract():
         # Verify extracted term is correct
         cost_model = ExprNodeCost()
         cost_analysis = MinimumCostExtractor()
-        extracted = cost_analysis.extract(cost_model, actual, root)
+        extracted = cost_analysis.extract(cost_model, actual, root.find())
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.extract(cost_model, actual, root)) == best_terms[-1]
+    assert str(cost_analysis.extract(cost_model, actual, root.find())) == best_terms[-1]
     expected = {
-        "e0": {"a": [()], "/": [("e5", "e1")], "*": [("e0", "e4")]},
+        "e0": {"a": [()], "/": [("e2", "e1")], "*": [("e0", "e4")]},
         "e1": {"2": [()]},
+        "e2": {"*": [("e0", "e1")], "<<": [("e0", "e4")]},
         "e4": {"1": [()], "/": [("e1", "e1")]},
-        "e5": {"*": [("e0", "e1")], "<<": [("e0", "e4")]},
     }
     assert verify_egraph_shape(actual, expected)
 

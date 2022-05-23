@@ -115,7 +115,6 @@ T = TypeVar('T')
 
 
 class PALPrimitive(Generic[T], PALNode):
-    value: T
     _fields = ("value",)
 
     def __init__(self, value: T):
@@ -123,6 +122,8 @@ class PALPrimitive(Generic[T], PALNode):
 
 
 class PALLeaf(Generic[T], PALNode):
+    _fields = ("kind", "constr", "args",)
+
     def __init__(self, kind: str, constr: Callable[[T], Any], *args: T):
         self.kind: Optional[str] = kind
         self.constr: Callable[[T], Any] = constr

@@ -106,7 +106,7 @@ def test_merge_props():
     expected = {
         "e0": {"x": [()]},
         "e1": {"y": [()]},
-        "e4": {"->": [("e0", "e1")], "|": [("e3", "e1")]},
+        "e2": {"->": [("e0", "e1")], "|": [("e3", "e1")]},
         "e3": {"~": [("e0",)]},
     }
     assert verify_egraph_shape(actual, expected)
@@ -161,12 +161,12 @@ def test_expr_subst():
     lhs, env = matches[0]
     rhs = actual.subst(rule.rhs, env)
 
-    assert str(rhs) == "e4"
+    assert str(rhs) == "e2"
     expected = {
         "e0": {"x": [()]},
         "e1": {"y": [()]},
+        "e2": {"|": [("e3", "e1")], "->": [("e0", "e1")]},
         "e3": {"~": [("e0",)]},
-        "e4": {"|": [("e3", "e1")], "->": [("e0", "e1")]},
     }
     verify_egraph_shape(actual, expected)
 
@@ -174,22 +174,22 @@ def test_expr_subst():
 def test_apply_rules_for_contrapositive():
     actual = EGraph(x_implies_y())
     rules = make_rules()
-    versions = [3, 14, 16, 24]
+    versions = [3, 14, 16, 18]
     for version in versions:
         assert actual.version == version
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
     expected = {
-        "e3": {"~": [("e5",)]},
-        "e5": {"x": [()], "~": [("e3",)]},
-        "e6": {"~": [("e7",)]},
-        "e7": {"y": [()], "~": [("e6",)]},
-        "e14": {"~": [("e13",)]},
-        "e13": {
-            "~": [("e14",)],
-            "->": [("e5", "e7"), ("e6", "e3")],
-            "|": [("e3", "e7"), ("e7", "e3")],
+        "e0": {"x": [()], "~": [("e3",)]},
+        "e1": {"y": [()], "~": [("e6",)]},
+        "e2": {
+            "~": [("e8",)],
+            "->": [("e0", "e1"), ("e6", "e3")],
+            "|": [("e3", "e1"), ("e1", "e3")],
         },
+        "e3": {"~": [("e0",)]},
+        "e6": {"~": [("e1",)]},
+        "e8": {"~": [("e2",)]},
     }
     assert verify_egraph_shape(actual, expected)
 
@@ -199,7 +199,7 @@ def test_extract_contrapositive():
     actual = EGraph(not_y_implies_not_x())
     root = actual.root
     rules = make_rules()
-    versions = [5, 18, 20, 28]
+    versions = [5, 14, 16, 18]
     best_terms = ["(-> (~ y) (~ x))", "(| y (~ x))", "(| y (~ x))", "(-> x y)"]
     for version, term in zip(versions, best_terms):
         assert actual.version == version
@@ -212,15 +212,15 @@ def test_extract_contrapositive():
     assert actual.version == versions[-1]
     assert str(cost_analysis.extract(cost_model, actual, root)) == best_terms[-1]
     expected = {
-        "e5": {"y": [()], "~": [("e7",)]},
-        "e7": {"~": [("e5",)]},
-        "e8": {"x": [()], "~": [("e9",)]},
-        "e9": {"~": [("e8",)]},
-        "e16": {"~": [("e15",)]},
-        "e15": {
-            "~": [("e16",)],
-            "|": [("e5", "e9"), ("e9", "e5")],
-            "->": [("e7", "e9"), ("e8", "e5")],
+        "e0": {"y": [()], "~": [("e1",)]},
+        "e1": {"~": [("e0",)]},
+        "e2": {"x": [()], "~": [("e3",)]},
+        "e3": {"~": [("e2",)]},
+        "e4": {
+            "~": [("e8",)],
+            "|": [("e0", "e3"), ("e3", "e0")],
+            "->": [("e1", "e3"), ("e2", "e0")],
         },
+        "e8": {"~": [("e4",)]},
     }
     assert verify_egraph_shape(actual, expected)

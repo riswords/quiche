@@ -1,13 +1,15 @@
-from typing import NamedTuple, Tuple, Dict, List, Any
+from typing import NamedTuple, Tuple, Dict, List, Any, TypeVar, Generic
+from abc import ABC
 
 from .quiche_tree import QuicheTree
 from .rewrite import Rule
 
 
 class EClassID:
-    def __init__(self, id, parent: "EClassID" = None):
+    def __init__(self, id, parent: "EClassID" = None, data: Any = None):
         self.id = id
         self.parent = parent
+        self.data = data
 
         # List of tuples of (ENode, EClassID) of enodes that use this EClassID
         # and the EClassID of that use
@@ -56,15 +58,6 @@ class ENode(NamedTuple):
     key: Any
     args: Tuple[EClassID, ...]
 
-    # def __init__(self, key, args):
-    #    print('Creating enode ', key, ' with args: ', args)
-    #    self.key = key
-    #    self.args = args # EClassIDs?
-
-    # def apply_substitution(self, subst) -> 'ENode':
-    #    # returns ENode
-    #    pass
-
     # print it out like an s-expr
     def __repr__(self):
         if self.args:
@@ -77,8 +70,52 @@ class ENode(NamedTuple):
         return ENode(self.key, tuple(arg.find() for arg in self.args))
 
 
+D = TypeVar('D')
+
+
+class EClassAnalysis(ABC, Generic[D]):
+    """
+    EClass Analysis, parameterized by the domain, D.
+
+    `join` must respect semilattice laws
+
+    1. Must maintain the invariant that:
+
+    for every eclass in the graph,
+        the analysis data for that eclass, dc, is the (lattice) LUB of the
+        `make` of all nodes in that eclass
+
+    In other words, the data in the eclass is the same as if you called
+    `make` on all nodes of the eclass and then `join`ed them together
+
+    2. `modify` is at a fixed point
+    """
+
+    def make(self, egraph: 'EGraph', n: ENode) -> D:
+        """
+        Create a new analysis value in the domain.
+
+        :param n: enode
+        :returns: dval value in the domain
+        """
+        pass
+
+    def join(self, dval1: D, dval2: D) -> D:
+        """Combine two analysis values, respecting semilattice laws
+        :returns: dval value in the domain
+        """
+        pass
+
+    def modify(self, egraph: 'EGraph', eclass: EClassID) -> EClassID:
+        """(Optional) modify the eclass when its associated analysis value
+        changes.
+        :returns: modified eclass
+        """
+        pass
+
+
 class EGraph:
-    def __init__(self, tree: QuicheTree = None):
+    def __init__(self, tree: QuicheTree = None, analysis: EClassAnalysis = None):
         self.id_counter = 0
 
         # quickly check whether the egraph has mutated
@@ -88,8 +125,12 @@ class EGraph:
         # already defined
         self.hashcons: Dict[ENode, EClassID] = {}
 
+        self._cached_eclasses: Tuple[int, Dict[EClassID, List[ENode]]] = (0, {})
+
         # List<EClassID> of eclasses mutated by a merge, used for `rebuild`
         self.worklist: List[EClassID] = []
+
+        self.analysis = analysis
 
         self.root = None
         if tree is not None:
@@ -247,7 +288,10 @@ class EGraph:
             eclassid = self._new_singleton_eclass()
             for arg in enode.args:
                 arg.uses.append((enode, eclassid))
-        self.hashcons[enode] = eclassid
+            self.hashcons[enode] = eclassid
+            if self.analysis:
+                eclassid.data = self.analysis.make(self, enode)
+                self.analysis.modify(self, eclassid)
         # rhs of hashcons isn't canonicalized, so do that now
         return eclassid.find()
 
@@ -262,24 +306,52 @@ class EGraph:
             ENode(node.value(), tuple(self.add(n) for n in node.children()))
         )
 
-    def merge(self, eclass1, eclass2):
+    def find(self, eclass_id: EClassID) -> EClassID:
+        return eclass_id.find()
+
+    def union_eclasses(self, eid1: EClassID, eid2: EClassID) -> EClassID:
+        """
+        Union two eclasses.
+
+        :param eid1: EClassID
+        :param eid2: EClassID
+        :returns: EClassID
+        """
+        if eid1 is eid2:
+            return eid1
+
+        # Merge into the lower (older) eclass_id
+        e1 = max(eid1, eid2)
+        e2 = min(eid1, eid2)
+
+        # Maintain invariant that uses are recorded on the parent EClassID
+        e1.parent = e2
+        e2.uses += e1.uses
+        e1.uses = []
+
+        return e2
+
+    def merge(self, eclass1: EClassID, eclass2: EClassID) -> EClassID:
         e1 = eclass1.find()
         e2 = eclass2.find()
         if e1 is e2:
             return e1
         self.version += 1
-        e1.parent = e2
 
-        # Update uses of eclasses:
-        # Maintain invariant that uses are recorded on the parent EClassID
-        e2.uses += e1.uses
-        e1.uses = []  # TODO: was None in original?
+        new_id = self.union_eclasses(e1, e2)
 
         # now that eclassid e2 is worklist, nodes in the hashcons may not be
         # canonicalized, and we might discover that 2 enodes are actually the
         # same value. We use `repair` to fix this and track in the `worklist`
         # list.
-        self.worklist.append(e2)
+        self.worklist.append(new_id)
+
+        # Update analysis
+        if self.analysis:
+            data1, data2 = e1.data, e2.data
+            e2.data = self.analysis.join(data1, data2)
+
+        return new_id
 
     # Ensure we have a de-duplicated version of the EGraph
     def rebuild(self):
@@ -319,6 +391,16 @@ class EGraph:
         # should be tied to the parent instead
         eclassid.find().uses += new_uses.items()
 
+        # Update analysis
+        # Mutations that modify makes to the eclass are added to the worklist
+        if self.analysis:
+            self.analysis.modify(eclassid)
+            for enode, eclass in eclassid.uses:
+                new_data = self.analysis.join(eclass.data, self.analysis.make(self, enode))
+                if new_data != eclass.data:
+                    eclass.data = new_data
+                    self.worklist.append(eclass)
+
     def apply_rules(self, rules: List[Rule]):
         """
         :param rules: List[Rule]
@@ -347,6 +429,10 @@ class EGraph:
         Extract dictionary of (canonicalized) EClassIDs to ENodes
         :returns: Dict[EClassID, List[ENode]]
         """
+        # Check for cached eclasses
+        if self._cached_eclasses[0] == self.version:
+            return self._cached_eclasses[1]
+
         result = {}
         for enode, eid in self.hashcons.items():
             eid = eid.find()
@@ -354,6 +440,21 @@ class EGraph:
                 result[eid] = [enode]
             else:
                 result[eid].append(enode)
+
+        self._cached_eclasses = (self.version, result)
+        return result
+
+    def lookup_eclass(self, eclassid: EClassID):
+        """
+        Return all enodes associated with an EClassID.
+        Warning: May be expensive, depending on egraph size. Results are cached
+        but must be recomputed every time the egraph is modified.
+        """
+        eclassid = eclassid.find()
+        result = []
+        for enode, eid in self.hashcons.items():
+            if eid.find() == eclassid:
+                result.append(enode)
         return result
 
     def subst(self, pattern: QuicheTree, env: Dict[str, EClassID]):
