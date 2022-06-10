@@ -8,12 +8,11 @@ from quiche.quiche_tree import QuicheTree
 
 class CostModel(ABC):
     @abstractmethod
-    def enode_cost(self, enode, costs):
+    def enode_cost(self, enode: ENode):
         """
         Calculate the cost of a node, not taking its children into account.
 
         :param enode: enode whose cost is to be calculated
-        :param costs: dictionary of costs for eclasses
         :returns: cost of the node
         """
         pass
@@ -35,11 +34,11 @@ class CostModel(ABC):
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
     ) -> QuicheTree:
         """
-        Look up a QuicheTree corresponding to the lowest cost ENode from the EClassID.
+        Look up a QuicheTree corresponding to the best cost ENode from the EClassID.
 
         :param eclassid: eclassid to look up
         :param costs: dictionary from EClassID to a (cost, ENode) tuple
-        :returns: QuicheTree corresponding to the lowest cost ENode
+        :returns: QuicheTree corresponding to the best cost ENode
         """
         pass
 

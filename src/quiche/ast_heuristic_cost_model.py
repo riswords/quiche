@@ -120,7 +120,7 @@ class ASTHeuristicCostModel(CostModel):
         if node_weights:
             self.node_weights.update(node_weights)
 
-    def enode_cost(self, node: ENode, costs: Dict[EClassID, Tuple[int, ENode]]) -> int:
+    def enode_cost(self, node: ENode) -> int:
         """
         Calculate the cost of a node based solely on its key (not its children)
         """
@@ -146,7 +146,7 @@ class ASTHeuristicCostModel(CostModel):
         :param costs: dictionary containing costs of children
         """
         child_costs = sum(costs[eid][0] for eid in enode.args)
-        return self.enode_cost(enode, costs) + child_costs
+        return self.enode_cost(enode) + child_costs
 
     def lookup(
         self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
