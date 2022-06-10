@@ -41,14 +41,11 @@ class ASTQuicheTree(QuicheTree):
         if not ASTQuicheTree.is_primitive_type(type(self.root)):
             if hasattr(self.root, "_fields"):
                 for field in self.root._fields:
-                    if hasattr(self.root, field):
-                        child = getattr(self.root, field)
-                        if isinstance(child, List):
-                            self._children.extend([ASTQuicheTree(root=c) for c in child])
-                        else:
-                            self._children.append(ASTQuicheTree(root=child))
+                    child = getattr(self.root, field, None)
+                    if isinstance(child, List):
+                        self._children.extend([ASTQuicheTree(root=c) for c in child])
                     else:
-                        self._children.append(ASTQuicheTree(root=None))
+                        self._children.append(ASTQuicheTree(root=child))
 
     def value(self):
         root_type = type(self.root)
@@ -75,10 +72,13 @@ class ASTQuicheTree(QuicheTree):
             - A QuicheBlock with a single child that is a pattern symbol (this
             allows us to match a body with one or more expressions)
         """
-        if isinstance(self.root, Expr):
-            if isinstance(self.root.value, PALLeaf):
-                if self.root.value.constr in [Str, Name, Constant]:
-                    self._is_pattern_symbol = self.root.value.args[0].startswith("__quiche__")
+        if isinstance(self.root, PALLeaf):
+            if self.root.constr in [Str, Name]:
+                self._is_pattern_symbol = self.root.args[0].startswith("__quiche__")
+            elif self.root.constr is Constant and self.root.kind == "str":
+                self._is_pattern_symbol = self.root.args[0].startswith("__quiche__")
+        elif isinstance(self.root, Expr):
+            self._is_pattern_symbol = self.children()[0].is_pattern_symbol()
         elif isinstance(self.root, PALBlock) and len(self.children()) == 1:
             self._is_pattern_symbol = self.children()[0].is_pattern_symbol()
         return
@@ -99,9 +99,13 @@ class ASTQuicheTree(QuicheTree):
         from ast import parse, fix_missing_locations
         from quiche.rewrite import Rule
 
-        # assumes LHS and RHS are single expressions
+        # assumes LHS and RHS are single expressions or statements
         lhs_ast = parse(lhs, mode="single").body[0]
         rhs_ast = parse(rhs, mode="single").body[0]
+        if isinstance(lhs_ast, Expr):
+            lhs_ast = lhs_ast.value
+        if isinstance(rhs_ast, Expr):
+            rhs_ast = rhs_ast.value
         lifter = PALLift().make_lifter()
         lhs_ast2 = fix_missing_locations(lifter.visit(lhs_ast))
         rhs_ast2 = fix_missing_locations(lifter.visit(rhs_ast))
