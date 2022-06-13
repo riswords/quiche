@@ -178,6 +178,7 @@ def test_apply_rule1():
     actual = EGraph(quiche_tree)
     rule = make_rule_1()
 
+    assert not actual.is_saturated()
     actual.apply_rules([rule])
     if version_info[:2] <= (3, 7):
         assert actual.version == 145
@@ -194,7 +195,7 @@ def test_extract_identity():
     cost_model = ASTSizeCostModel()
     extractor = MinimumCostExtractor()
     # print("ECLASSES: ", actual.eclasses())
-    extracted = extractor.extract(cost_model, eg, root)
+    extracted = extractor.extract(cost_model, eg, root, ASTQuicheTree.make_node)
     actual = extracted.to_source_string()
     assert expected == actual
 
@@ -205,6 +206,7 @@ def test_extract_rule1():
         expected_lines = f.read().splitlines()
     eg = EGraph(quiche_tree)
     rule = make_rule_1()
+    assert not eg.is_saturated()
     eg.apply_rules([rule])
     if version_info[:2] <= (3, 7):
         assert eg.version == 145
@@ -214,7 +216,7 @@ def test_extract_rule1():
     root = eg.root
     cost_model = ASTHeuristicCostModel()
     extractor = MinimumCostExtractor()
-    extracted = extractor.extract(cost_model, eg, root)
+    extracted = extractor.extract(cost_model, eg, root, ASTQuicheTree.make_node)
     actual_lines = extracted.to_source_string().splitlines()
 
     for idx, (act, exp) in enumerate(zip(actual_lines, expected_lines)):
@@ -235,7 +237,7 @@ def test_constant_folding():
 
     cost_model = ASTSizeCostModel()
     extractor = MinimumCostExtractor()
-    extracted = extractor.extract(cost_model, eg, eg.root)
+    extracted = extractor.extract(cost_model, eg, eg.root, ASTQuicheTree.make_node)
     actual_lines = extracted.to_source_string().splitlines()
 
     for idx, (res, pre) in enumerate(zip(actual_lines, original_lines)):

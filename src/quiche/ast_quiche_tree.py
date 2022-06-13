@@ -1,5 +1,5 @@
-from typing import List, Optional
-from ast import AST, Expr, Str, Name, fix_missing_locations, Constant
+from typing import List, Optional, Tuple
+from ast import AST, Expr, Str, Name, fix_missing_locations, Constant, parse
 
 from astor import parse_file, to_source
 
@@ -28,6 +28,11 @@ class ASTQuicheTree(QuicheTree):
         self.__init_pattern_symbol()
 
     @staticmethod
+    def parse_string(source_string: str) -> AST:
+        root = parse(source_string)
+        return fix_missing_locations(PALLift().make_lifter().visit(root))
+
+    @staticmethod
     def parse_file(filename) -> AST:
         root = parse_file(filename)
         return fix_missing_locations(PALLift().make_lifter().visit(root))
@@ -39,13 +44,14 @@ class ASTQuicheTree(QuicheTree):
         self.root = tree
         self._children = []
         if not ASTQuicheTree.is_primitive_type(type(self.root)):
-            if hasattr(self.root, "_fields"):
-                for field in self.root._fields:
-                    child = getattr(self.root, field, None)
-                    if isinstance(child, List):
-                        self._children.extend([ASTQuicheTree(root=c) for c in child])
-                    else:
-                        self._children.append(ASTQuicheTree(root=child))
+            for field in getattr(self.root, "_fields", []):
+                child = getattr(self.root, field, None)
+                if isinstance(child, List):
+                    if len(self.root._fields) != 1:
+                        print("BAD LIST FLATTENING: {}".format(child))
+                    self._children.extend([ASTQuicheTree(root=c) for c in child])
+                else:
+                    self._children.append(ASTQuicheTree(root=child))
 
     def value(self):
         root_type = type(self.root)
@@ -115,7 +121,7 @@ class ASTQuicheTree(QuicheTree):
 
     @staticmethod
     # TODO: This is kind of a mess - we should definitely clean this up...
-    def make_node(node_type, children: List["ASTQuicheTree"]) -> "ASTQuicheTree":
+    def make_node(node_type, children: Tuple["ASTQuicheTree", ...]) -> "ASTQuicheTree":
         # identifiers
         if type(node_type) is str:
             return ASTQuicheTree(root=node_type)

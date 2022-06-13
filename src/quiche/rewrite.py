@@ -1,5 +1,8 @@
+from quiche.quiche_tree import QuicheTree
+
+
 class Rule:
-    def __init__(self, lhs, rhs):
+    def __init__(self, lhs: QuicheTree, rhs: QuicheTree):
         self.lhs = lhs
         self.rhs = rhs
 

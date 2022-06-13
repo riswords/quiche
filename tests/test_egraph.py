@@ -204,11 +204,11 @@ def test_extract():
         # Verify extracted term is correct
         cost_model = ExprNodeCost()
         cost_analysis = MinimumCostExtractor()
-        extracted = cost_analysis.extract(cost_model, actual, root.find())
+        extracted = cost_analysis.extract(cost_model, actual, root.find(), ExprTree.make_node)
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.extract(cost_model, actual, root.find())) == best_terms[-1]
+    assert str(cost_analysis.extract(cost_model, actual, root.find(), ExprTree.make_node)) == best_terms[-1]
     expected = {
         "e0": {"a": [()], "/": [("e2", "e1")], "*": [("e0", "e4")]},
         "e1": {"2": [()]},
@@ -226,7 +226,7 @@ def run_test():
     cost_analysis = MinimumCostExtractor()
     while True:
         version = eg.version
-        print("BEST: ", cost_analysis.extract(cost_model, eg, root))
+        print("BEST: ", cost_analysis.extract(cost_model, eg, root, ExprTree.make_node))
         eg.apply_rules(rules)
         if version == eg.version:
             break

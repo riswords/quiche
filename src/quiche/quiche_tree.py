@@ -42,7 +42,11 @@ class QuicheTree(ABC):
 
         def make_node(graph, x):
             node_id = str(id(x))
-            graph.node(f'{node_id}', label=f'{escape(x.value())}', shape='rectangle')
+            if hasattr(x.value(), "__name__"):
+                xvalue = x.value().__name__
+            else:
+                xvalue = x.value()
+            graph.node(f'{node_id}', label=f'{escape(xvalue)}', shape='rectangle')
             node_children = x.children()
             if node_children:
                 for child in node_children:
@@ -52,7 +56,7 @@ class QuicheTree(ABC):
 
         graph = Digraph(node_attr={'shape': 'record', 'height': '.1'})
         make_node(graph, self)
-        return graph._repr_image_svg_xml()
+        return graph.pipe(format='svg', encoding='utf-8')
 
     def write_to_svg(self, filename):
         """

@@ -177,8 +177,10 @@ def test_apply_rules_for_contrapositive():
     versions = [3, 14, 16, 18]
     for version in versions:
         assert actual.version == version
+        assert not actual.is_saturated()
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
+    assert actual.is_saturated()
     expected = {
         "e0": {"x": [()], "~": [("e3",)]},
         "e1": {"y": [()], "~": [("e6",)]},
@@ -203,14 +205,16 @@ def test_extract_contrapositive():
     best_terms = ["(-> (~ y) (~ x))", "(| y (~ x))", "(| y (~ x))", "(-> x y)"]
     for version, term in zip(versions, best_terms):
         assert actual.version == version
+        assert not actual.is_saturated()
         # Verify extracted term is correct
         cost_model = PropTreeCost()
         cost_analysis = MinimumCostExtractor()
-        extracted = cost_analysis.extract(cost_model, actual, root)
+        extracted = cost_analysis.extract(cost_model, actual, root, PropTree)
         assert str(extracted) == term
         actual.apply_rules(rules)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.extract(cost_model, actual, root)) == best_terms[-1]
+    assert actual.is_saturated()
+    assert str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]
     expected = {
         "e0": {"y": [()], "~": [("e1",)]},
         "e1": {"~": [("e0",)]},

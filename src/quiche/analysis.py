@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from math import inf
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Callable, Any
 
 from quiche.egraph import EGraph, EClassID, ENode
 from quiche.quiche_tree import QuicheTree
@@ -29,24 +29,12 @@ class CostModel(ABC):
         """
         pass
 
-    @abstractmethod
-    def lookup(
-        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]]
-    ) -> QuicheTree:
-        """
-        Look up a QuicheTree corresponding to the best cost ENode from the EClassID.
-
-        :param eclassid: eclassid to look up
-        :param costs: dictionary from EClassID to a (cost, ENode) tuple
-        :returns: QuicheTree corresponding to the best cost ENode
-        """
-        pass
-
 
 class CostExtractor(ABC):
     @abstractmethod
     def extract(
-        self, cost_model: CostModel, egraph: EGraph, result: EClassID
+        self, cost_model: CostModel, egraph: EGraph, result: EClassID,
+        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree]
     ) -> QuicheTree:
         """
         Extract the QuicheTree for the "best" ENode from the  EGraph,
@@ -62,7 +50,8 @@ class CostExtractor(ABC):
 
 class MinimumCostExtractor(CostExtractor):
     def extract(
-        self, cost_model: CostModel, egraph: EGraph, result: EClassID
+        self, cost_model: CostModel, egraph: EGraph, result: EClassID,
+        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree]
     ) -> QuicheTree:
         """
         Extract lowest cost ENode from EGraph.
@@ -92,4 +81,18 @@ class MinimumCostExtractor(CostExtractor):
                     changed = True
                 costs[eclass] = new_cost
 
-        return cost_model.lookup(result, costs)
+        return self._extract_tree(result, costs, build_tree)
+
+    def _extract_tree(
+        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]],
+        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree]
+    ) -> QuicheTree:
+        """
+        Build QuicheTree from a dictionary of costs and EClassIDs.
+
+        :param eclassid: eclassid to look up
+        :param costs: dictionary from EClassID to a (cost, ENode) tuple
+        :returns: QuicheTree corresponding to the best cost ENode
+        """
+        enode = costs[eclassid][1]
+        return build_tree(enode.key, tuple(self._extract_tree(eid, costs, build_tree) for eid in enode.args))

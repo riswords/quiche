@@ -46,7 +46,7 @@ class EClassID:
 
     # end TODO
 
-    def find(self):
+    def find(self) -> 'EClassID':
         if self.parent is None:
             return self
         top = self.parent.find()
@@ -120,6 +120,8 @@ class EGraph:
 
         # quickly check whether the egraph has mutated
         self.version = 0
+        self._is_saturated = False
+        self.timeout = -1
 
         # dict<ENode_canon, EClassID_noncanon> for checking if an enode is
         # already defined
@@ -136,14 +138,8 @@ class EGraph:
         if tree is not None:
             self.root = self.add(tree)
 
-    def _repr_svg_(self):
+    def _repr_svg_(self, show_eclass_labels: bool = True):
         from graphviz import Digraph
-
-        def format_record(x):
-            if isinstance(x, list):
-                return '{' + '|'.join(format_record(e) for e in x) + '}'
-            else:
-                return x
 
         def escape(x):
             escapes = [('|', '\\|'),
@@ -152,37 +148,62 @@ class EGraph:
             x = str(x)
             for old, new in escapes:
                 x = x.replace(old, new)
-            # return str(x).replace('|', '\\|').replace('<', '\\<').replace('>', '\\>')
             return x
 
         graph = Digraph(node_attr={'shape': 'record', 'height': '.1'})
+        graph.attr(compound="true")
+        graph.attr(ranksep="1")
+        graph.attr(nodesep=".5")
+
         for eclass, enodes in self.eclasses().items():
-            graph.node(f'{eclass.id}', label=f'e{eclass.id}', shape='circle')
+            # collect all e-node edges until the sub-graph is done
+            graph_edges = []
+            subname = f'cluster_{eclass.id}'
+            # print("SUBGRAPH NAME:", subname)
+            with graph.subgraph(name=subname) as ec:
+                ec.attr(style='dashed,rounded')
+                if show_eclass_labels:
+                    ec.attr(label=f'e{eclass.id}')
+                    ec.attr(labeljust='l')
+                # invisible reference node for e-nodes to point to
+                ec.node(f'refcluster{eclass.id}', shape='point', color='white', height='0', width='0')
 
-            for enode in enodes:
-                enode_id = str(id(enode))
-                graph.edge(f'{eclass.id}', enode_id)
+                for enode in enodes:
+                    enode_id = str(id(enode))
+                    # ec.edge(f'{eclass.id}', enode_id)
 
-                record = [escape(enode.key)]
-                for i, arg in enumerate(enode.args):
-                    graph.edge(f'{enode_id}:p{i}', f'{arg.id}')
-                    record.append(f'<p{i}>')
-                graph.node(enode_id, label='|'.join(record))
-        return graph._repr_image_svg_xml()
+                    if hasattr(enode.key, "__name__"):
+                        key = enode.key.__name__
+                    else:
+                        key = enode.key
+                    record = [escape(key)]
+                    for i, arg in enumerate(enode.args):
+                        dest = f'cluster_{arg.id}'
+                        # print("DRAWING EDGE TO ", dest)
+                        # graph.edge(f'{enode_id}:p{i}', f'refcluster{arg.id}', lhead=dest)
+                        graph_edges.append((f'{enode_id}:p{i}', f'refcluster{arg.id}', dest))
+                        record.append(f'<p{i}>')
+                    ec.node(enode_id, label='|'.join(record))
+            # We could add this in the loop above, but doing it here ensures
+            # that the invisible reference nodes are consistently on the right
+            for edge in graph_edges:
+                graph.edge(edge[0], edge[1], lhead=edge[2])
 
-    def write_to_svg(self, filename: str):
+        return graph.pipe(format='svg', encoding='utf-8')
+
+    def write_to_svg(self, filename: str, show_eclass_labels: bool = True):
         """
         Write e-graph to file in SVG format.
 
         :param filename: filename to write
         :return: None
         """
-        svg_xml = self._repr_svg_()
+        svg_xml = self._repr_svg_(show_eclass_labels=show_eclass_labels)
         with open(filename, "w") as f:
             f.write(svg_xml)
 
-    def is_saturated_or_timeout(self):
-        pass
+    def is_saturated(self):
+        return self._is_saturated
 
     def ematch(self, pattern: QuicheTree, eclasses: Dict[EClassID, List[ENode]]):
         Env = Dict[str, EClassID]  # type alias
@@ -279,12 +300,13 @@ class EGraph:
         self.id_counter += 1
         return singleton
 
-    def add_enode(self, enode: ENode):
+    def add_enode(self, enode: ENode) -> EClassID:
         enode = enode.canonicalize()
         eclassid = self.hashcons.get(enode, None)
         if eclassid is None:
             # Node not found, so create it
             self.version += 1
+            self._is_saturated = False
             eclassid = self._new_singleton_eclass()
             for arg in enode.args:
                 arg.uses.append((enode, eclassid))
@@ -295,7 +317,7 @@ class EGraph:
         # rhs of hashcons isn't canonicalized, so do that now
         return eclassid.find()
 
-    def add(self, node: QuicheTree):
+    def add(self, node: QuicheTree) -> EClassID:
         """
         Add a new node to the EGraph.
 
@@ -337,6 +359,7 @@ class EGraph:
         if e1 is e2:
             return e1
         self.version += 1
+        self._is_saturated = False
 
         new_id = self.union_eclasses(e1, e2)
 
@@ -361,6 +384,7 @@ class EGraph:
             self.worklist = []
             for eclassid in todo:
                 self.repair(eclassid)
+        self._is_saturated = True
 
     def repair(self, eclassid):
         """
@@ -394,7 +418,7 @@ class EGraph:
         # Update analysis
         # Mutations that modify makes to the eclass are added to the worklist
         if self.analysis:
-            self.analysis.modify(eclassid)
+            self.analysis.modify(self, eclassid)
             for enode, eclass in eclassid.uses:
                 new_data = self.analysis.join(eclass.data, self.analysis.make(self, enode))
                 if new_data != eclass.data:
@@ -407,6 +431,7 @@ class EGraph:
         :returns: EGraph
         """
         canonical_eclasses = self.eclasses()
+        changed = False
 
         matches = []
         for rule in rules:
@@ -415,10 +440,12 @@ class EGraph:
         # print(f"VERSION {self.version}")
         for rule, eid, env in matches:
             new_eid = self.subst(rule.rhs, env)
-            # if eid is not new_eid:
-            #     print(f"{eid} MATCHED {rule} with {env}")
+            if eid is not new_eid:
+                # print(f"{eid} MATCHED {rule} with {env}")
+                changed = True
             self.merge(eid, new_eid)
         self.rebuild()
+        self._is_saturated = not changed
         return self
 
     def extract_best(self):
