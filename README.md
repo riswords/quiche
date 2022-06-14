@@ -2,19 +2,21 @@
 Quiche is a python implementation of egraphs based on
 [egraphs-good (egg)](https://egraphs-good.github.io/).
 
-For usage examples, check out the demo code in demo/demo.py!
+For usage examples, check out the demo code in `demo/egraphs_demo.py`,
+as well as the `tests` directory: `test_asts.py`, `test_egraph.py`, and
+`prop_test.py`!
 
 Additional documentation coming soon!
 
 
 ## Installation:
 
-Currently, Quiche only works with python 3.7, but additional version support
-will be coming soon.
+Currently, Quiche works with python 3.7-3.10.
 
 We recommend using venv.
 See [the Python documentation](https://docs.python.org/3/library/venv.html)
-for venv setup. E.g., in Bash:
+for venv setup. E.g., in Bash, you can do the following to set up a python 3.7
+virtual environment:
 
     $ python3.7 -m venv .
 
@@ -22,9 +24,19 @@ Activate your virtual environment, e.g. in Bash:
 
     $ source ./bin/activate
 
-To install (from the top-level `quiche` directory):
+And when you're finished you can deactivate it as well:
+
+    $ deactivate
+
+
+To install Quiche, clone this repo and use pip (from the top-level `quiche` directory):
 
     $ pip install .
+
+If you want to generate SVG images of `QuicheTree`s or `EGraphs` you should
+also install `graphviz`:
+
+    $ pip install graphviz
 
 
 ## Running Tests
