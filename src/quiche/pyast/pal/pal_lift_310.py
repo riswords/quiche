@@ -1,7 +1,9 @@
 from ast import (
+    MatchMapping,
+    MatchSequence,
+    MatchSingleton,
     Module,
     FunctionType,
-    Suite,
     FunctionDef,
     AsyncFunctionDef,
     Assign,
@@ -10,29 +12,36 @@ from ast import (
     AsyncFor,
     With,
     AsyncWith,
+    Match,
     Constant,
     Attribute,
-    ExtSlice,
     arguments,
     arg,
+    match_case,
+    MatchClass,
+    MatchStar,
+    MatchAs,
+    MatchOr,
 )
 
-from quiche.pal.pal_block import (
+from quiche.pyast.pal.pal_block import (
+    IdentifierBlock,
     PALIdentifier,
     PALLeaf,
     PALPrimitive,
     StmtBlock,
     ExprBlock,
-    SliceBlock,
     ArgBlock,
     WithItemBlock,
     TypeIgnoreBlock,
+    MatchCaseBlock,
+    PatternBlock,
 )
 
-from quiche.pal.pal_lifter import PALLifter
+from quiche.pyast.pal.pal_lifter import PALLifter
 
 
-class PALLift38(PALLifter):
+class PALLift310(PALLifter):
     def visit_Module(self, node: Module) -> Module:
         # Short-circuit: assume if the body is a StmtBlock, it's already
         # been transformed. NOTE: may need to revisit this later if this
@@ -44,12 +53,6 @@ class PALLift38(PALLifter):
 
     # visit_Interactive provided by PALLifter
     # visit_Expression not needed
-
-    def visit_Suite(self, node: Suite) -> Suite:
-        if isinstance(node.body, StmtBlock):
-            return node
-        self.generic_visit(node)
-        return Suite(body=StmtBlock(node.body))
 
     def visit_FunctionType(self, node: FunctionType) -> FunctionType:
         if isinstance(node.argtypes, ExprBlock):
@@ -157,6 +160,15 @@ class PALLift38(PALLifter):
             type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
         )
 
+    def visit_Match(self, node: Match) -> Match:
+        if isinstance(node.cases, MatchCaseBlock):
+            return node
+        self.generic_visit(node)
+        return Match(
+            subject=node.subject,
+            cases=MatchCaseBlock(node.cases),
+        )
+
     # visit_Raise not needed
     # visit_Try provided by PALLifter
     # visit_Assert not needed
@@ -192,13 +204,7 @@ class PALLift38(PALLifter):
 
     # visit_Subscript, Starred not needed
     # visit_Name, List, Tuple provided by PALLifter
-
-    def visit_ExtSlice(self, node: ExtSlice) -> ExtSlice:
-        if isinstance(node.dims, SliceBlock):
-            return node
-        self.generic_visit(node)
-        return ExtSlice(dims=SliceBlock(node.dims))
-
+    # visit_Slice not needed
     # visit_comprehension, ExceptHandler provided by PALLifter
 
     def visit_arguments(self, node: arguments) -> arguments:
@@ -227,3 +233,68 @@ class PALLift38(PALLifter):
 
     # visit_keyword, alias provided by PALLifter
     # visit_withitem not needed
+
+    def visit_match_case(self, node: match_case) -> match_case:
+        if isinstance(node.body, StmtBlock):
+            return node
+        self.generic_visit(node)
+        return match_case(
+            pattern=node.pattern,
+            guard=node.guard,
+            body=StmtBlock(node.body),
+        )
+
+    # vsiit_MatchValue not needed
+
+    def visit_MatchSingleton(self, node: MatchSingleton) -> MatchSingleton:
+        if isinstance(node.value, PALLeaf):
+            return node
+        return MatchSingleton(value=PALPrimitive(node.value))
+
+    def visit_MatchSequence(self, node: MatchSequence) -> MatchSequence:
+        if isinstance(node.patterns, PatternBlock):
+            return node
+        self.generic_visit(node)
+        return MatchSequence(patterns=PatternBlock(node.patterns))
+
+    def visit_MatchMapping(self, node: MatchMapping) -> MatchMapping:
+        if isinstance(node.keys, ExprBlock):
+            return node
+        self.generic_visit(node)
+        return MatchMapping(
+            keys=ExprBlock(node.keys),
+            patterns=PatternBlock(node.patterns),
+            rest=PALIdentifier(node.rest) if node.rest else None,
+        )
+
+    def visit_MatchClass(self, node: MatchClass) -> MatchClass:
+        if isinstance(node.patterns, PatternBlock):
+            return node
+        self.generic_visit(node)
+        return MatchClass(
+            cls=node.cls,
+            patterns=PatternBlock(node.patterns),
+            kwd_attrs=IdentifierBlock([PALIdentifier(ident) for ident in node.kwd_attrs]),
+            kwd_patterns=PatternBlock(node.kwd_patterns),
+        )
+
+    def visit_MatchStar(self, node: MatchStar) -> MatchStar:
+        # NOTE: Might need to add a hasattr check
+        if isinstance(node.name, PALIdentifier):
+            return node
+        return MatchStar(name=PALIdentifier(node.name) if node.name else None)
+
+    def visit_MatchAs(self, node: MatchAs) -> MatchAs:
+        if isinstance(node.name, PALIdentifier):
+            return node
+        self.generic_visit(node)
+        return MatchAs(
+            pattern=node.pattern,
+            name=PALIdentifier(node.name) if node.name else None
+        )
+
+    def visit_MatchOr(self, node: MatchOr) -> MatchOr:
+        if isinstance(node.patterns, PatternBlock):
+            return node
+        self.generic_visit(node)
+        return MatchOr(patterns=PatternBlock(node.patterns))

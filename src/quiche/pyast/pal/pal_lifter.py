@@ -31,7 +31,7 @@ from ast import (
     alias
 )
 
-from quiche.pal.pal_block import (
+from quiche.pyast.pal.pal_block import (
     PALIdentifier,
     PALLeaf,
     IdentifierBlock,

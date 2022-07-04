@@ -1,6 +1,6 @@
 from ast import NodeTransformer
 
-from quiche.pal.pal_block import (
+from quiche.pyast.pal.pal_block import (
     IdentifierBlock,
     PALIdentifier,
     PALPrimitive,

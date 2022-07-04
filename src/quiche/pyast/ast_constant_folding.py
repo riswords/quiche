@@ -1,10 +1,9 @@
-from platform import python_version
 from typing import Optional, List
 from ast import operator, Num, Constant, BinOp, Add, Sub, Mult, Div
 
-from quiche.ast_quiche_tree import ASTQuicheTree
+from quiche.pyast.ast_quiche_tree import ASTQuicheTree
 from quiche.egraph import ENode, EClassID, EGraph, EClassAnalysis
-from quiche.pal.pal_block import PALLeaf
+from quiche.pyast.pal.pal_block import PALLeaf
 
 
 class ASTConstantFolding(EClassAnalysis[Optional[int]]):

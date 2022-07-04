@@ -1,4 +1,4 @@
-from quiche.ast_quiche_tree import ASTQuicheTree
+from quiche.pyast.ast_quiche_tree import ASTQuicheTree
 from quiche.egraph import EGraph
 
 ## Construction
@@ -10,7 +10,7 @@ root = egraph.root
 
 ## Term extraction
 from quiche.analysis import MinimumCostExtractor
-from quiche.ast_size_cost_model import ASTSizeCostModel
+from quiche.pyast.ast_size_cost_model import ASTSizeCostModel
 
 model = ASTSizeCostModel()
 extractor = MinimumCostExtractor()
@@ -30,7 +30,7 @@ egraph.apply_rules([rewrite])
 
 
 ## Term extraction again
-from quiche.ast_heuristic_cost_model import ASTHeuristicCostModel
+from quiche.pyast.ast_heuristic_cost_model import ASTHeuristicCostModel
 
 model = ASTHeuristicCostModel()
 extractor = MinimumCostExtractor()

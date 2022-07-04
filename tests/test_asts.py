@@ -2,12 +2,12 @@ import ast
 import os
 from sys import version_info
 
-from quiche.ast_quiche_tree import ASTQuicheTree
+from quiche.pyast.ast_quiche_tree import ASTQuicheTree
 from quiche.egraph import EGraph
-import quiche.pal.pal_block as ASTQT
-from quiche.ast_size_cost_model import ASTSizeCostModel
-from quiche.ast_heuristic_cost_model import ASTHeuristicCostModel
-from quiche.ast_constant_folding import ASTConstantFolding
+import quiche.pyast.pal.pal_block as ASTQT
+from quiche.pyast.ast_size_cost_model import ASTSizeCostModel
+from quiche.pyast.ast_heuristic_cost_model import ASTHeuristicCostModel
+from quiche.pyast.ast_constant_folding import ASTConstantFolding
 from quiche.analysis import MinimumCostExtractor
 
 

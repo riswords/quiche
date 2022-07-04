@@ -4,7 +4,7 @@ from ast import AST, Expr, Str, Name, fix_missing_locations, Constant, parse
 from astor import parse_file, to_source
 
 from quiche.quiche_tree import QuicheTree
-from quiche.pal.pal_block import PAL, PALBlock, PALLift, PALLeaf
+from quiche.pyast.pal.pal_block import PAL, PALBlock, PALLift, PALLeaf
 
 
 class ASTQuicheTree(QuicheTree):
