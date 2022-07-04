@@ -1,4 +1,5 @@
 import ast
+import os
 from sys import version_info
 
 from quiche.ast_quiche_tree import ASTQuicheTree
@@ -10,13 +11,19 @@ from quiche.ast_constant_folding import ASTConstantFolding
 from quiche.analysis import MinimumCostExtractor
 
 
+def input_directory():
+    return os.path.join(os.path.dirname(__file__), "input")
+
+
 def setup_sqrt_tree():
-    tree_root = ASTQuicheTree("tests/test_sqrt.py")
+    fname = os.path.join(input_directory(), "test_sqrt.py")
+    tree_root = ASTQuicheTree(fname)
     return tree_root
 
 
 def setup_constant_folding_tree():
-    tree_root = ASTQuicheTree("tests/constant_folding.py")
+    fname = os.path.join(input_directory(), "constant_folding.py")
+    tree_root = ASTQuicheTree(fname)
     return tree_root
 
 
@@ -188,7 +195,8 @@ def test_apply_rule1():
 
 def test_extract_identity():
     quiche_tree = setup_sqrt_tree()
-    with open("tests/test_sqrt.py", "r") as f:
+    fname = os.path.join(input_directory(), "test_sqrt.py")
+    with open(fname, "r") as f:
         expected = f.read()
     eg = EGraph(quiche_tree)
     root = eg.root
@@ -202,7 +210,8 @@ def test_extract_identity():
 
 def test_extract_rule1():
     quiche_tree = setup_sqrt_tree()
-    with open("tests/test_sqrt.py", "r") as f:
+    fname = os.path.join(input_directory(), "test_sqrt.py")
+    with open(fname, "r") as f:
         expected_lines = f.read().splitlines()
     eg = EGraph(quiche_tree)
     rule = make_rule_1()
@@ -230,7 +239,8 @@ def test_extract_rule1():
 # Constant Folding
 def test_constant_folding():
     tree = setup_constant_folding_tree()
-    with open("tests/constant_folding.py", "r") as f:
+    fname = os.path.join(input_directory(), "constant_folding.py")
+    with open(fname, "r") as f:
         original_lines = f.read().splitlines()
     analysis = ASTConstantFolding()
     eg = EGraph(tree, analysis)
