@@ -1,9 +1,9 @@
 from quiche.egraph import EGraph
 from quiche.analysis import MinimumCostExtractor
 
-from .prop_test_parser import PropParser, PropTree, PropTreeCost
+from .prop_parser import PropParser, PropTree, PropTreeCost
 
-from .test_egraph import verify_egraph_shape  # , print_egraph
+from .util import verify_egraph_shape  # , print_egraph
 
 
 def make_rules():

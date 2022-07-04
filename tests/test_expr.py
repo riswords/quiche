@@ -1,9 +1,8 @@
-from typing import Dict, List
-
 from quiche.egraph import EGraph
 from quiche.analysis import MinimumCostExtractor
 
-from .expr_test import ExprNode, ExprNodeCost, ExprTree
+from .util import verify_egraph_shape  # , print_egraph
+from .expr_lang import ExprNode, ExprNodeCost, ExprTree
 
 
 def exp(fn):
@@ -32,30 +31,6 @@ def shift():
 
 def times2():
     return exp(lambda a: a * 2)
-
-
-def print_egraph(eg):
-    for eid, enode in eg.eclasses().items():
-        print(eid, ": ", [en.key for en in enode], " ; ", [en.args for en in enode])
-
-
-def verify_egraph_shape(
-    actual_egraph: EGraph, expected_shape: Dict[str, Dict[str, List[str]]]
-):
-    eclasses = actual_egraph.eclasses()
-    # assert len(eclasses) == len(expected_shape)
-    for eclassid, eclass in eclasses.items():
-        eclassid_str = str(eclassid)
-        assert eclassid_str in expected_shape
-        for enode in eclass:
-            key_str = str(enode.key)
-            assert key_str in expected_shape[eclassid_str]
-            assert (
-                tuple(str(arg) for arg in enode.args)
-                in expected_shape[eclassid_str][key_str]
-            )
-
-    return True
 
 
 def test_add_times_divide():

@@ -5,7 +5,7 @@ from quiche.egraph import ENode, EClassID
 from quiche.quiche_tree import QuicheTree
 from quiche.analysis import CostModel
 
-from .prop_test_lexer import PropLexer
+from .prop_lexer import PropLexer
 
 import ply.yacc as yacc
 
