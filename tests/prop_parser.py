@@ -1,9 +1,6 @@
 from typing import Dict, Tuple, Union
 
-from quiche.rewrite import Rule
-from quiche.egraph import ENode, EClassID
-from quiche.quiche_tree import QuicheTree
-from quiche.analysis import CostModel
+from quiche import Rule, ENode, EClassID, QuicheTree, CostModel
 
 from .prop_lexer import PropLexer
 

@@ -2,13 +2,9 @@ import ast
 import os
 from sys import version_info
 
-from quiche.pyast.ast_quiche_tree import ASTQuicheTree
-from quiche.egraph import EGraph
-import quiche.pyast.pal.pal_block as ASTQT
-from quiche.pyast.ast_size_cost_model import ASTSizeCostModel
-from quiche.pyast.ast_heuristic_cost_model import ASTHeuristicCostModel
-from quiche.pyast.ast_constant_folding import ASTConstantFolding
-from quiche.analysis import MinimumCostExtractor
+from quiche import EGraph, MinimumCostExtractor
+from quiche.pyast import ASTQuicheTree, ASTSizeCostModel, ASTHeuristicCostModel, ASTConstantFolding
+from quiche.pyast.pal import StmtBlock as PALStmtBlock
 
 
 def input_directory():
@@ -106,7 +102,7 @@ def test_make_rule2():
 
     # Verify LHS (StmtBlock (Expr (Str __quiche__body))) structure
     stmt_sequence = rule.lhs.children()[1]
-    assert stmt_sequence.value() == ASTQT.StmtBlock
+    assert stmt_sequence.value() == PALStmtBlock
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value() == ast.Expr
     if version_info[:2] <= (3, 7):
@@ -138,7 +134,7 @@ def test_make_rule2():
 
     # Verify RHS (StmtBlock (Expr (Str __quiche__body))) structure
     stmt_sequence = rule.rhs.children()[1]
-    assert stmt_sequence.value() == ASTQT.StmtBlock
+    assert stmt_sequence.value() == PALStmtBlock
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value() == ast.Expr
     if version_info[:2] <= (3, 7):

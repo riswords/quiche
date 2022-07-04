@@ -1,5 +1,5 @@
-from quiche.pyast.ast_quiche_tree import ASTQuicheTree
-from quiche.egraph import EGraph
+from quiche.pyast import ASTQuicheTree
+from quiche import EGraph
 
 ## Construction
 quiche_tree = ASTQuicheTree("newton_sqrt.py")
@@ -9,13 +9,13 @@ root = egraph.root
 
 
 ## Term extraction
-from quiche.analysis import MinimumCostExtractor
-from quiche.pyast.ast_size_cost_model import ASTSizeCostModel
+from quiche import MinimumCostExtractor
+from quiche.pyast import ASTSizeCostModel
 
 model = ASTSizeCostModel()
 extractor = MinimumCostExtractor()
 
-term = extractor.extract(model, egraph, root)
+term = extractor.extract(model, egraph, root, ASTQuicheTree.make_node)
 term.to_file("newton_sqrt_unchanged.py")
 print(str(term))
 
@@ -30,10 +30,10 @@ egraph.apply_rules([rewrite])
 
 
 ## Term extraction again
-from quiche.pyast.ast_heuristic_cost_model import ASTHeuristicCostModel
+from quiche.pyast import ASTHeuristicCostModel
 
 model = ASTHeuristicCostModel()
 extractor = MinimumCostExtractor()
 
-term = extractor.extract(model, egraph, root)
+term = extractor.extract(model, egraph, root, ASTQuicheTree.make_node)
 term.to_file("newton_sqrt_while_1.py")

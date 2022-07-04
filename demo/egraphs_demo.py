@@ -1,8 +1,5 @@
-from quiche.analysis import MinimumCostExtractor
-from quiche.pyast.ast_quiche_tree import ASTQuicheTree
-from quiche.pyast.ast_constant_folding import ASTConstantFolding
-from quiche.pyast.ast_size_cost_model import ASTSizeCostModel
-from quiche.egraph import EGraph
+from quiche import EGraph, MinimumCostExtractor
+from quiche.pyast import ASTQuicheTree, ASTConstantFolding, ASTSizeCostModel
 
 
 def main():

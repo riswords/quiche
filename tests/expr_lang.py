@@ -1,9 +1,6 @@
 from typing import Dict, NamedTuple, Tuple, Union
 
-from quiche.quiche_tree import QuicheTree
-from quiche.egraph import EClassID, ENode
-from quiche.rewrite import Rule
-from quiche.analysis import CostModel
+from quiche import EClassID, ENode, QuicheTree, Rule, CostModel
 
 
 class ExprNode(NamedTuple):
