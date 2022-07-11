@@ -228,3 +228,77 @@ def test_extract_contrapositive():
         "e8": {"~": [("e4",)]},
     }
     assert verify_egraph_shape(actual, expected)
+
+
+def test_prove_chain():
+    rules = [
+        # x -> y ===> ~x | y
+        PropTree.make_rule("(-> ?x ?y)", "(| (~ ?x) ?y)"),
+        # ~x | y ===> x -> y
+        PropTree.make_rule("(| (~ ?x) ?y)", "(-> ?x ?y)"),
+        # x ===> ~ (~x)
+        PropTree.make_rule("?x", "~ (~ ?x)"),
+        # x | y ===> y | x
+        PropTree.make_rule("(| ?x ?y)", "(| ?y ?x)"),
+        # x & y ===> y & x
+        PropTree.make_rule("(& ?x ?y)", "(& ?y ?x)"),
+        # (x -> y) & (~x -> z) ===> y | z
+        PropTree.make_rule("(& (-> ?x ?y) (-> (~ ?x) ?z))", "(| ?y ?z)")
+    ]
+    # (a -> b) & (b -> c)
+    test_str = "(& (-> a b) (-> b c))"
+    parser = PropParser()
+    parser.build()
+    qt = parser.parse(test_str)
+    actual = EGraph(qt)
+    root = actual.root
+    versions = [6, 30, 34, 38, 42, 46]
+    best_terms = [
+        "(& (-> a b) (-> b c))",
+        "(& (-> a b) (-> b c))",
+        "(& (-> a b) (-> b c))",
+        "(& (-> a b) (-> b c))",
+        "(| c (~ a))",
+        "(-> a c)",
+    ]
+    for version, term in zip(versions, best_terms):
+        assert actual.version == version
+        assert not actual.is_saturated()
+        # Verify extracted term is correct
+        cost_model = PropTreeCost()
+        cost_analysis = MinimumCostExtractor()
+        extracted = cost_analysis.extract(cost_model, actual, root, PropTree)
+        assert str(extracted) == term
+        actual.apply_rules(rules)
+    assert actual.version == versions[-1]
+    assert actual.is_saturated()
+    assert str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]
+
+    expected = {
+        "e0": {"a": [()], "~": [("e6",)]},
+        "e1": {"b": [()], "~": [("e8",)]},
+        "e2": {
+            "~": [("e12",)],
+            "->": [("e0", "e1"), ("e8", "e6")],
+            "|": [("e6", "e1"), ("e1", "e6")],
+        },
+        "e3": {"c": [()], "~": [("e14",)]},
+        "e4": {
+            "~": [("e16",)],
+            "->": [("e1", "e3"), ("e14", "e8")],
+            "|": [("e8", "e3"), ("e3", "e8")],
+        },
+        "e5": {
+            "~": [("e18",)],
+            "&": [("e2", "e4"), ("e4", "e2")],
+            "|": [("e6", "e3"), ("e3", "e6")],
+            "->": [("e0", "e3"), ("e14", "e6")],
+        },
+        "e6": {"~": [("e0",)]},
+        "e8": {"~": [("e1",)]},
+        "e14": {"~": [("e3",)]},
+        "e12": {"~": [("e2",)]},
+        "e16": {"~": [("e4",)]},
+        "e18": {"~": [("e5",)]},
+    }
+    assert verify_egraph_shape(actual, expected)
