@@ -1,5 +1,4 @@
-from quiche.egraph import EGraph
-from quiche.analysis import MinimumCostExtractor
+from quiche import EGraph, MinimumCostExtractor, Rule
 
 from .prop_parser import PropParser, PropTree, PropTreeCost
 
@@ -159,7 +158,7 @@ def test_expr_subst():
     rule = PropTree.make_rule("(-> ?x ?y)", "(| (~ ?x) ?y)")
     matches = actual.ematch(rule.lhs, actual.eclasses())
     lhs, env = matches[0]
-    rhs = actual.subst(rule.rhs, env)
+    rhs = rule._subst(actual, rule.rhs, env)
 
     assert str(rhs) == "e2"
     expected = {
@@ -178,7 +177,7 @@ def test_apply_rules_for_contrapositive():
     for version in versions:
         assert actual.version == version
         assert not actual.is_saturated()
-        actual.apply_rules(rules)
+        Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
     assert actual.is_saturated()
     expected = {
@@ -211,7 +210,7 @@ def test_extract_contrapositive():
         cost_analysis = MinimumCostExtractor()
         extracted = cost_analysis.extract(cost_model, actual, root, PropTree)
         assert str(extracted) == term
-        actual.apply_rules(rules)
+        Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
     assert actual.is_saturated()
     assert str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]
@@ -269,7 +268,7 @@ def test_prove_chain():
         cost_analysis = MinimumCostExtractor()
         extracted = cost_analysis.extract(cost_model, actual, root, PropTree)
         assert str(extracted) == term
-        actual.apply_rules(rules)
+        Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
     assert actual.is_saturated()
     assert str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]

@@ -2,7 +2,7 @@ import ast
 import os
 from sys import version_info
 
-from quiche import EGraph, MinimumCostExtractor
+from quiche import EGraph, MinimumCostExtractor, Rule
 from quiche.pyast import ASTQuicheTree, ASTSizeCostModel, ASTHeuristicCostModel, ASTConstantFolding
 from quiche.pyast.pal import StmtBlock as PALStmtBlock
 
@@ -182,7 +182,7 @@ def test_apply_rule1():
     rule = make_rule_1()
 
     assert not actual.is_saturated()
-    actual.apply_rules([rule])
+    Rule.apply_rules([rule], actual)
     if version_info[:2] <= (3, 7):
         assert actual.version == 145
     else:
@@ -212,7 +212,7 @@ def test_extract_rule1():
     eg = EGraph(quiche_tree)
     rule = make_rule_1()
     assert not eg.is_saturated()
-    eg.apply_rules([rule])
+    Rule.apply_rules([rule], eg)
     if version_info[:2] <= (3, 7):
         assert eg.version == 145
     else:
