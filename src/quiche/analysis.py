@@ -67,7 +67,7 @@ class MinimumCostExtractor(CostExtractor):
         # uninitialized costs can be absent from `costs`. (NOTE: this might
         # also help with the issue of eclasses containing enodes with the same
         # key).
-        costs = {eid: (inf, None) for eid in eclasses.keys()}
+        costs = {eid.find(): (inf, None) for eid in eclasses.keys()}
         changed = True
 
         # iterate until saturation, taking lowest cost option

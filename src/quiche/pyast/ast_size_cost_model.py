@@ -24,5 +24,5 @@ class ASTSizeCostModel(CostModel):
         :param enode: the node to calculate the cost of
         :param costs: dictionary containing costs of children
         """
-        child_costs = sum(costs[eid][0] for eid in enode.args)
+        child_costs = sum(costs[eid.find()][0] for eid in enode.args)
         return self.enode_cost(enode) + child_costs

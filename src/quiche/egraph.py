@@ -282,7 +282,7 @@ class EGraph:
                 matched = False
                 matched_envs = []
                 # does one of the ways to define this class match the pattern?
-                for enode in eclasses[eid]:
+                for enode in eclasses[eid.find()]:
                     for env in envs:
                         matches, new_envs = enode_matches(p, enode, [env])
                         if matches:
@@ -393,7 +393,12 @@ class EGraph:
         Repair the EClassID `eclassid` by canonicalizing all nodes in the
         uses list.
         """
-        assert eclassid.parent is None
+        # If this happens, it probably means that `eclassid` was marked
+        # for repair and then merged into another e-class. If that happens,
+        # just don't worry about `eclassid` because it will be repaired
+        # later (I think- unless I'm wrong, and we do need to repair...)
+        if eclassid.parent is not None:
+            return
 
         # reset uses of eclassid, repopulate at the end
         uses, eclassid.uses = eclassid.uses, []
