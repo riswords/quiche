@@ -33,12 +33,42 @@ class PAL:
     # NOTE: Might need to adjust for different Python versions
     def is_leaf_node_type(self, node_type: type) -> bool:
         return node_type in [
-            ast.Load, ast.Store, ast.Del, ast.AugLoad, ast.AugStore,
-            ast.Param, ast.And, ast.Or, ast.Add, ast.Sub, ast.Mult,
-            ast.MatMult, ast.Div, ast.Mod, ast.Pow, ast.LShift, ast.RShift,
-            ast.BitOr, ast.BitXor, ast.BitAnd, ast.FloorDiv, ast.Invert,
-            ast.Not, ast.UAdd, ast.USub, ast.Eq, ast.NotEq, ast.Lt,
-            ast.LtE, ast.Gt, ast.GtE, ast.Is, ast.IsNot, ast.In, ast.NotIn]
+            ast.Load,
+            ast.Store,
+            ast.Del,
+            ast.AugLoad,
+            ast.AugStore,
+            ast.Param,
+            ast.And,
+            ast.Or,
+            ast.Add,
+            ast.Sub,
+            ast.Mult,
+            ast.MatMult,
+            ast.Div,
+            ast.Mod,
+            ast.Pow,
+            ast.LShift,
+            ast.RShift,
+            ast.BitOr,
+            ast.BitXor,
+            ast.BitAnd,
+            ast.FloorDiv,
+            ast.Invert,
+            ast.Not,
+            ast.UAdd,
+            ast.USub,
+            ast.Eq,
+            ast.NotEq,
+            ast.Lt,
+            ast.LtE,
+            ast.Gt,
+            ast.GtE,
+            ast.Is,
+            ast.IsNot,
+            ast.In,
+            ast.NotIn,
+        ]
 
 
 class PALLift:
@@ -53,15 +83,19 @@ class PALLift:
             print("PYTHON VERSION: ", ver_tup)
             if ver_tup == (3, 7):
                 from .pal_lift_37 import PALLift37
+
                 self.lifter = PALLift37()
             elif ver_tup == (3, 8):
                 from .pal_lift_38 import PALLift38
+
                 self.lifter = PALLift38()
             elif ver_tup == (3, 9):
                 from .pal_lift_39 import PALLift39
+
                 self.lifter = PALLift39()
             elif ver_tup == (3, 10):
                 from .pal_lift_310 import PALLift310
+
                 self.lifter = PALLift310()
             else:
                 raise ValueError(f"Unsupported Python version: {ver_tup}")
@@ -79,15 +113,19 @@ class PALExtract:
             ver_tup = version_info[:2]
             if ver_tup == (3, 7):
                 from .pal_extract_37 import PALExtract37
+
                 self.extractor = PALExtract37()
             elif ver_tup == (3, 8):
                 from .pal_extract_38 import PALExtract38
+
                 self.extractor = PALExtract38()
             elif ver_tup == (3, 9):
                 from .pal_extract_39 import PALExtract39
+
                 self.extractor = PALExtract39()
             elif ver_tup == (3, 10):
                 from .pal_extract_310 import PALExtract310
+
                 self.extractor = PALExtract310()
             else:
                 raise ValueError(f"Unsupported Python version: {ver_tup}")
@@ -99,7 +137,7 @@ class PALNode(AST):
 
 
 # GENERIC BLOCK TYPE
-B = TypeVar('B')
+B = TypeVar("B")
 
 
 class PALBlock(Generic[B], PALNode):
@@ -111,7 +149,7 @@ class PALBlock(Generic[B], PALNode):
 
 
 # WRAPPERS FOR BUILTIN TYPES
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class PALPrimitive(Generic[T], PALNode):
@@ -122,7 +160,11 @@ class PALPrimitive(Generic[T], PALNode):
 
 
 class PALLeaf(Generic[T], PALNode):
-    _fields = ("kind", "constr", "args",)
+    _fields = (
+        "kind",
+        "constr",
+        "args",
+    )
 
     def __init__(self, kind: str, constr: Callable[[T], Any], *args: T):
         self.kind: Optional[str] = kind

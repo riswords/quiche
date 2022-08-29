@@ -21,7 +21,7 @@ class ASTConstantFolding(EClassAnalysis[Optional[int]]):
 
     def make(self, egraph: EGraph, enode: ENode) -> Optional[int]:
         # return number if we have an int
-        if type(enode.key) == tuple and enode.key[0] == 'int':
+        if type(enode.key) == tuple and enode.key[0] == "int":
             return enode.key[2]
         # if we have a BinOp and a foldable op, check to see if we have ints to fold
         elif enode.key == BinOp:
@@ -50,10 +50,11 @@ class ASTConstantFolding(EClassAnalysis[Optional[int]]):
     def modify(self, egraph: EGraph, eclass: EClassID) -> EClassID:
         if eclass.data is not None:
             from sys import version_info
+
             if version_info[:2] <= (3, 7):
-                new_node = PALLeaf('int', Num, eclass.data)
+                new_node = PALLeaf("int", Num, eclass.data)
             else:
-                new_node = PALLeaf('int', Constant, eclass.data, None)
+                new_node = PALLeaf("int", Constant, eclass.data, None)
             ecid = egraph.add(ASTQuicheTree(root=new_node))
             egraph.merge(eclass, ecid)
         return eclass

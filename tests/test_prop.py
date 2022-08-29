@@ -213,7 +213,9 @@ def test_extract_contrapositive():
         Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
     assert actual.is_saturated()
-    assert str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]
+    assert (
+        str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]
+    )
     expected = {
         "e0": {"y": [()], "~": [("e1",)]},
         "e1": {"~": [("e0",)]},
@@ -242,7 +244,7 @@ def test_prove_chain():
         # x & y ===> y & x
         PropTree.make_rule("(& ?x ?y)", "(& ?y ?x)"),
         # (x -> y) & (~x -> z) ===> y | z
-        PropTree.make_rule("(& (-> ?x ?y) (-> (~ ?x) ?z))", "(| ?y ?z)")
+        PropTree.make_rule("(& (-> ?x ?y) (-> (~ ?x) ?z))", "(| ?y ?z)"),
     ]
     # (a -> b) & (b -> c)
     test_str = "(& (-> a b) (-> b c))"
@@ -271,7 +273,9 @@ def test_prove_chain():
         Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
     assert actual.is_saturated()
-    assert str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]
+    assert (
+        str(cost_analysis.extract(cost_model, actual, root, PropTree)) == best_terms[-1]
+    )
 
     expected = {
         "e0": {"a": [()], "~": [("e6",)]},

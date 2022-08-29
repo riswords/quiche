@@ -13,7 +13,9 @@ def exp(fn):
 def make_rules():
     rules = [
         ExprTree.make_rule(lambda x: (x * 2, x << 1)),  # mult by 2 is shift left 1
-        ExprTree.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z))),  # reassociate *,/
+        ExprTree.make_rule(
+            lambda x, y, z: ((x * y) / z, x * (y / z))
+        ),  # reassociate *,/
         ExprTree.make_rule(lambda x: (x / x, ExprNode(1, ()))),  # x/x = 1
         ExprTree.make_rule(lambda x: (x * 1, x)),  # simplify mult by 1
     ]
@@ -178,11 +180,16 @@ def test_extract():
         # Verify extracted term is correct
         cost_model = ExprNodeCost()
         cost_analysis = MinimumCostExtractor()
-        extracted = cost_analysis.extract(cost_model, actual, root.find(), ExprTree.make_node)
+        extracted = cost_analysis.extract(
+            cost_model, actual, root.find(), ExprTree.make_node
+        )
         assert str(extracted) == term
         Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
-    assert str(cost_analysis.extract(cost_model, actual, root.find(), ExprTree.make_node)) == best_terms[-1]
+    assert (
+        str(cost_analysis.extract(cost_model, actual, root.find(), ExprTree.make_node))
+        == best_terms[-1]
+    )
     expected = {
         "e0": {"a": [()], "/": [("e2", "e1")], "*": [("e0", "e4")]},
         "e1": {"2": [()]},

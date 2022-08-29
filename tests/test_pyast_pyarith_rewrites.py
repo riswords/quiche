@@ -3,7 +3,12 @@ from sys import version_info
 
 from quiche import EGraph, MinimumCostExtractor, Rule
 from quiche.pyast import ASTQuicheTree, ASTSizeCostModel
-from quiche.pyast.pyarith_rewrites import mul_zero_rule, mul_div_distributive_rule, div_self_rule, mul_one_rule
+from quiche.pyast.pyarith_rewrites import (
+    mul_zero_rule,
+    mul_div_distributive_rule,
+    div_self_rule,
+    mul_one_rule,
+)
 
 
 def input_directory():
@@ -35,7 +40,9 @@ def test_some_arith_rules_1():
     # Verify rewrites
     cost_model = ASTSizeCostModel()
     extractor = MinimumCostExtractor()
-    extracted = extractor.extract(cost_model, actual, actual.root, ASTQuicheTree.make_node)
+    extracted = extractor.extract(
+        cost_model, actual, actual.root, ASTQuicheTree.make_node
+    )
     actual_lines = extracted.to_source_string().splitlines()
 
     fname = os.path.join(input_directory(), "constant_folding.py")
@@ -58,7 +65,7 @@ def test_some_arith_rules_1():
         elif idx == 89:
             assert pre == "    y = x * 2 / 2"
             assert res == "    y = x / 2"
-        elif idx == 99: 
+        elif idx == 99:
             assert pre == "    y = x * 0 / 0"
             assert res == "    y = 0 / 0"
         else:

@@ -45,7 +45,7 @@ class EClassID:
 
     # end TODO
 
-    def find(self) -> 'EClassID':
+    def find(self) -> "EClassID":
         if self.parent is None:
             return self
         top = self.parent.find()
@@ -69,7 +69,7 @@ class ENode(NamedTuple):
         return ENode(self.key, tuple(arg.find() for arg in self.args))
 
 
-D = TypeVar('D')
+D = TypeVar("D")
 
 
 class EClassAnalysis(ABC, Generic[D]):
@@ -90,7 +90,7 @@ class EClassAnalysis(ABC, Generic[D]):
     2. `modify` is at a fixed point
     """
 
-    def make(self, egraph: 'EGraph', n: ENode) -> D:
+    def make(self, egraph: "EGraph", n: ENode) -> D:
         """
         Create a new analysis value in the domain.
 
@@ -105,7 +105,7 @@ class EClassAnalysis(ABC, Generic[D]):
         """
         pass
 
-    def modify(self, egraph: 'EGraph', eclass: EClassID) -> EClassID:
+    def modify(self, egraph: "EGraph", eclass: EClassID) -> EClassID:
         """(Optional) modify the eclass when its associated analysis value
         changes.
         :returns: modified eclass
@@ -145,15 +145,13 @@ class EGraph:
         from graphviz import Digraph
 
         def escape(x):
-            escapes = [('|', '\\|'),
-                       ('<', '\\<'),
-                       ('>', '\\>')]
+            escapes = [("|", "\\|"), ("<", "\\<"), (">", "\\>")]
             x = str(x)
             for old, new in escapes:
                 x = x.replace(old, new)
             return x
 
-        graph = Digraph(node_attr={'shape': 'record', 'height': '.1'})
+        graph = Digraph(node_attr={"shape": "record", "height": ".1"})
         graph.attr(compound="true")
         graph.attr(ranksep="1")
         graph.attr(nodesep=".5")
@@ -161,15 +159,21 @@ class EGraph:
         for eclass, enodes in self.eclasses().items():
             # collect all e-node edges until the sub-graph is done
             graph_edges = []
-            subname = f'cluster_{eclass.id}'
+            subname = f"cluster_{eclass.id}"
             # print("SUBGRAPH NAME:", subname)
             with graph.subgraph(name=subname) as ec:
-                ec.attr(style='dashed,rounded')
+                ec.attr(style="dashed,rounded")
                 if show_eclass_labels:
-                    ec.attr(label=f'e{eclass.id}')
-                    ec.attr(labeljust='l')
+                    ec.attr(label=f"e{eclass.id}")
+                    ec.attr(labeljust="l")
                 # invisible reference node for e-nodes to point to
-                ec.node(f'refcluster{eclass.id}', shape='point', color='white', height='0', width='0')
+                ec.node(
+                    f"refcluster{eclass.id}",
+                    shape="point",
+                    color="white",
+                    height="0",
+                    width="0",
+                )
 
                 for enode in enodes:
                     enode_id = str(id(enode))
@@ -181,18 +185,20 @@ class EGraph:
                         key = enode.key
                     record = [escape(key)]
                     for i, arg in enumerate(enode.args):
-                        dest = f'cluster_{arg.id}'
+                        dest = f"cluster_{arg.id}"
                         # print("DRAWING EDGE TO ", dest)
                         # graph.edge(f'{enode_id}:p{i}', f'refcluster{arg.id}', lhead=dest)
-                        graph_edges.append((f'{enode_id}:p{i}', f'refcluster{arg.id}', dest))
-                        record.append(f'<p{i}>')
-                    ec.node(enode_id, label='|'.join(record))
+                        graph_edges.append(
+                            (f"{enode_id}:p{i}", f"refcluster{arg.id}", dest)
+                        )
+                        record.append(f"<p{i}>")
+                    ec.node(enode_id, label="|".join(record))
             # We could add this in the loop above, but doing it here ensures
             # that the invisible reference nodes are consistently on the right
             for edge in graph_edges:
                 graph.edge(edge[0], edge[1], lhead=edge[2])
 
-        return graph.pipe(format='svg', encoding='utf-8')
+        return graph.pipe(format="svg", encoding="utf-8")
 
     def write_to_svg(self, filename: str, show_eclass_labels: bool = True):
         """
@@ -208,7 +214,9 @@ class EGraph:
     def is_saturated(self):
         return self._is_saturated
 
-    def ematch(self, pattern: QuicheTree, eclasses: Dict[EClassID, List[ENode]]) -> List[Tuple[EClassID, Subst]]:
+    def ematch(
+        self, pattern: QuicheTree, eclasses: Dict[EClassID, List[ENode]]
+    ) -> List[Tuple[EClassID, Subst]]:
         """
         :param pattern: QuicheTree
         :param eclasses: Dict[EClassID, List[ENode]]
@@ -298,13 +306,18 @@ class EGraph:
         return matches
 
     def env_lookup(self, env: Subst, key: str):
-        """Look up key in the env substition
-        """
+        """Look up key in the env substition"""
         import ast
+
         # TODO: This probably shouldn't go on EGraph. Need to re-work
         for k in env.keys():
             if len(k) >= 4:
-                if k[0] == "name" and k[1] is ast.Name and k[2] == key and type(k[3]) is ast.Load:
+                if (
+                    k[0] == "name"
+                    and k[1] is ast.Name
+                    and k[2] == key
+                    and type(k[3]) is ast.Load
+                ):
                     return env[k]
         return None
 
@@ -438,7 +451,9 @@ class EGraph:
         if self.analysis:
             self.analysis.modify(self, eclassid)
             for enode, eclass in eclassid.uses:
-                new_data = self.analysis.join(eclass.data, self.analysis.make(self, enode))
+                new_data = self.analysis.join(
+                    eclass.data, self.analysis.make(self, enode)
+                )
                 if new_data != eclass.data:
                     eclass.data = new_data
                     self.worklist.append(eclass)

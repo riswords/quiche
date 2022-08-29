@@ -82,7 +82,9 @@ class PALLift37(PALLifter):
         if isinstance(node.simple, PALPrimitive):
             return node
         self.generic_visit(node)
-        return AnnAssign(target=node.target, value=node.value, simple=PALPrimitive[int](node.simple))
+        return AnnAssign(
+            target=node.target, value=node.value, simple=PALPrimitive[int](node.simple)
+        )
 
     def visit_For(self, node: For) -> For:
         if isinstance(node.body, StmtBlock):
@@ -116,9 +118,7 @@ class PALLift37(PALLifter):
         if isinstance(node.items, WithItemBlock):
             return node
         self.generic_visit(node)
-        return AsyncWith(
-            items=WithItemBlock(node.items), body=StmtBlock(node.body)
-        )
+        return AsyncWith(items=WithItemBlock(node.items), body=StmtBlock(node.body))
 
     # EXPRESSIONS
     def visit_Num(self, node: Num) -> PALLeaf[complex]:

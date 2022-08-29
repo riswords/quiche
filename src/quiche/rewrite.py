@@ -1,7 +1,15 @@
 from typing import Callable, Dict, Sequence
 
 from quiche.quiche_tree import QuicheTree
-from quiche.egraph import EGraph, EClassID, EMatch, ENode, EGraphRewriter, Subst, EGraphSearcher
+from quiche.egraph import (
+    EGraph,
+    EClassID,
+    EMatch,
+    ENode,
+    EGraphRewriter,
+    Subst,
+    EGraphSearcher,
+)
 
 
 class Rule(EGraphSearcher, EGraphRewriter):
@@ -67,7 +75,13 @@ class ConditionalRule(Rule):
     always apply the rewrite; however, we choose to assume that a conditional rule
     without a checker is the result of a client error and decline to apply the rule.)
     """
-    def __init__(self, lhs: QuicheTree, rhs: QuicheTree, checker: Callable[[EGraph, EClassID, Subst], bool] = None):
+
+    def __init__(
+        self,
+        lhs: QuicheTree,
+        rhs: QuicheTree,
+        checker: Callable[[EGraph, EClassID, Subst], bool] = None,
+    ):
         super().__init__(lhs, rhs)
         self._checker = checker
 

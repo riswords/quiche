@@ -31,9 +31,7 @@ class QuicheTree(ABC):
         from graphviz import Digraph
 
         def escape(x):
-            escapes = [('|', '\\|'),
-                       ('<', '\\<'),
-                       ('>', '\\>')]
+            escapes = [("|", "\\|"), ("<", "\\<"), (">", "\\>")]
             x = str(x)
             for old, new in escapes:
                 x = x.replace(old, new)
@@ -46,17 +44,17 @@ class QuicheTree(ABC):
                 xvalue = x.value().__name__
             else:
                 xvalue = x.value()
-            graph.node(f'{node_id}', label=f'{escape(xvalue)}', shape='rectangle')
+            graph.node(f"{node_id}", label=f"{escape(xvalue)}", shape="rectangle")
             node_children = x.children()
             if node_children:
                 for child in node_children:
                     child_id = make_node(graph, child)
-                    graph.edge(f'{node_id}', f'{child_id}')
+                    graph.edge(f"{node_id}", f"{child_id}")
             return node_id
 
-        graph = Digraph(node_attr={'shape': 'record', 'height': '.1'})
+        graph = Digraph(node_attr={"shape": "record", "height": ".1"})
         make_node(graph, self)
-        return graph.pipe(format='svg', encoding='utf-8')
+        return graph.pipe(format="svg", encoding="utf-8")
 
     def write_to_svg(self, filename):
         """

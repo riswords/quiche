@@ -40,7 +40,9 @@ class PALLift38(PALLifter):
         if isinstance(node.body, StmtBlock):
             return node
         self.generic_visit(node)
-        return Module(body=StmtBlock(node.body), type_ignores=TypeIgnoreBlock(node.type_ignores))
+        return Module(
+            body=StmtBlock(node.body), type_ignores=TypeIgnoreBlock(node.type_ignores)
+        )
 
     # visit_Interactive provided by PALLifter
     # visit_Expression not needed
@@ -67,7 +69,9 @@ class PALLift38(PALLifter):
             body=StmtBlock(node.body),
             decorator_list=ExprBlock(node.decorator_list),
             returns=node.returns,
-            type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_comment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     def visit_AsyncFunctionDef(self, node: AsyncFunctionDef) -> AsyncFunctionDef:
@@ -80,7 +84,9 @@ class PALLift38(PALLifter):
             body=StmtBlock(node.body),
             decorator_list=ExprBlock(node.decorator_list),
             returns=node.returns,
-            type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_comment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     # visit_ClassDef provided by PALLifter
@@ -94,7 +100,9 @@ class PALLift38(PALLifter):
         return Assign(
             targets=ExprBlock(node.targets),
             value=node.value,
-            type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_comment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     # visit_AugAssign not needed
@@ -107,7 +115,7 @@ class PALLift38(PALLifter):
             target=node.target,
             annotation=node.annotation,
             value=node.value,
-            simple=PALPrimitive[int](node.simple)
+            simple=PALPrimitive[int](node.simple),
         )
 
     def visit_For(self, node: For) -> For:
@@ -119,7 +127,9 @@ class PALLift38(PALLifter):
             iter=node.iter,
             body=StmtBlock(node.body),
             orelse=StmtBlock(node.orelse),
-            type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_comment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     def visit_AsyncFor(self, node: AsyncFor) -> AsyncFor:
@@ -131,7 +141,9 @@ class PALLift38(PALLifter):
             iter=node.iter,
             body=StmtBlock(node.body),
             orelse=StmtBlock(node.orelse),
-            type_coment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_coment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     # visit_While provided by PALLifter
@@ -144,7 +156,9 @@ class PALLift38(PALLifter):
         return With(
             items=WithItemBlock(node.items),
             body=StmtBlock(node.body),
-            type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_comment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     def visit_AsyncWith(self, node: AsyncWith) -> AsyncWith:
@@ -154,7 +168,9 @@ class PALLift38(PALLifter):
         return AsyncWith(
             items=WithItemBlock(node.items),
             body=StmtBlock(node.body),
-            type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_comment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     # visit_Raise not needed
@@ -222,7 +238,9 @@ class PALLift38(PALLifter):
         return arg(
             arg=PALIdentifier(node.arg),
             annotation=node.annotation,
-            type_comment=PALPrimitive[str](node.type_comment) if node.type_comment else None,
+            type_comment=PALPrimitive[str](node.type_comment)
+            if node.type_comment
+            else None,
         )
 
     # visit_keyword, alias provided by PALLifter

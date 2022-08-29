@@ -28,7 +28,7 @@ from ast import (
     comprehension,
     ExceptHandler,
     keyword,
-    alias
+    alias,
 )
 
 from quiche.pyast.pal.pal_block import (
@@ -47,7 +47,6 @@ from quiche.pyast.pal.pal_block import (
 
 
 class PALLifter(NodeTransformer):
-
     def visit_Interactive(self, node: Interactive) -> Interactive:
         if isinstance(node.body, StmtBlock):
             return node
@@ -116,20 +115,24 @@ class PALLifter(NodeTransformer):
         return ImportFrom(
             module=PALIdentifier(node.module) if node.module else None,
             names=AliasBlock(node.names),
-            level=PALPrimitive[int](node.level) if node.level else None
+            level=PALPrimitive[int](node.level) if node.level else None,
         )
 
     def visit_Global(self, node: Global) -> Global:
         if isinstance(node.names, IdentifierBlock):
             return node
         self.generic_visit(node)
-        return Global(names=IdentifierBlock([PALIdentifier(name) for name in node.names]))
+        return Global(
+            names=IdentifierBlock([PALIdentifier(name) for name in node.names])
+        )
 
     def visit_Nonlocal(self, node: Nonlocal) -> Nonlocal:
         if isinstance(node.names, IdentifierBlock):
             return node
         self.generic_visit(node)
-        return Nonlocal(names=IdentifierBlock([PALIdentifier(name) for name in node.names]))
+        return Nonlocal(
+            names=IdentifierBlock([PALIdentifier(name) for name in node.names])
+        )
 
     # EXPRESSIONS
     def visit_BoolOp(self, node: BoolOp) -> BoolOp:
@@ -207,7 +210,7 @@ class PALLifter(NodeTransformer):
         return FormattedValue(
             value=node.value,
             conversion=PALPrimitive[int](node.conversion) if node.conversion else None,
-            format_spec=node.format_spec
+            format_spec=node.format_spec,
         )
 
     def visit_JoinedStr(self, node: JoinedStr) -> JoinedStr:
@@ -262,10 +265,15 @@ class PALLifter(NodeTransformer):
         if isinstance(node.arg, PALIdentifier):
             return node
         self.generic_visit(node)
-        return keyword(arg=PALIdentifier(node.arg) if node.arg else None, value=node.value)
+        return keyword(
+            arg=PALIdentifier(node.arg) if node.arg else None, value=node.value
+        )
 
     def visit_alias(self, node: alias) -> alias:
         if isinstance(node.name, PALIdentifier):
             return node
         self.generic_visit(node)
-        return alias(name=PALIdentifier(node.name), asname=PALIdentifier(node.asname) if node.asname else None)
+        return alias(
+            name=PALIdentifier(node.name),
+            asname=PALIdentifier(node.asname) if node.asname else None,
+        )

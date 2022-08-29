@@ -1,6 +1,4 @@
-from quiche.pyast.pal.pal_block import (
-    TypeIgnoreBlock
-)
+from quiche.pyast.pal.pal_block import TypeIgnoreBlock
 
 from quiche.pyast.pal.pal_extractor import PALExtractor
 

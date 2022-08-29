@@ -3,7 +3,12 @@ import os
 from sys import version_info
 
 from quiche import EGraph, MinimumCostExtractor, Rule
-from quiche.pyast import ASTQuicheTree, ASTSizeCostModel, ASTHeuristicCostModel, ASTConstantFolding
+from quiche.pyast import (
+    ASTQuicheTree,
+    ASTSizeCostModel,
+    ASTHeuristicCostModel,
+    ASTConstantFolding,
+)
 from quiche.pyast.pal import StmtBlock as PALStmtBlock
 
 
@@ -56,7 +61,11 @@ def test_make_rule1():
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value().__name__ == "Expr"
     # assert stmt_sequence.children()[0].children()[0].value().__name__ == "Name"
-    assert stmt_sequence.children()[0].children()[0].value()[:3] == ("name", ast.Name, "__quiche__body")
+    assert stmt_sequence.children()[0].children()[0].value()[:3] == (
+        "name",
+        ast.Name,
+        "__quiche__body",
+    )
     assert type(stmt_sequence.children()[0].children()[0].value()[3]) == ast.Load
     assert stmt_sequence.children()[0].children()[0].root.kind == "name"
     assert stmt_sequence.children()[0].children()[0].root.constr == ast.Name
@@ -80,7 +89,11 @@ def test_make_rule1():
     assert stmt_sequence.value().__name__ == "StmtBlock"
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value().__name__ == "Expr"
-    assert stmt_sequence.children()[0].children()[0].value()[:3] == ("name", ast.Name, "__quiche__body")
+    assert stmt_sequence.children()[0].children()[0].value()[:3] == (
+        "name",
+        ast.Name,
+        "__quiche__body",
+    )
     assert type(stmt_sequence.children()[0].children()[0].value()[3]) == ast.Load
 
 
@@ -106,14 +119,28 @@ def test_make_rule2():
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value() == ast.Expr
     if version_info[:2] <= (3, 7):
-        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Str, "__quiche__body")
+        assert stmt_sequence.children()[0].children()[0].value() == (
+            "str",
+            ast.Str,
+            "__quiche__body",
+        )
         assert stmt_sequence.children()[0].children()[0].root.constr == ast.Str
-        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body",)
+        assert stmt_sequence.children()[0].children()[0].root.args == (
+            "__quiche__body",
+        )
     elif version_info[:2] >= (3, 8):
-        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Constant, "__quiche__body", None)
+        assert stmt_sequence.children()[0].children()[0].value() == (
+            "str",
+            ast.Constant,
+            "__quiche__body",
+            None,
+        )
         assert stmt_sequence.children()[0].children()[0].root.kind == "str"
         assert stmt_sequence.children()[0].children()[0].root.constr == ast.Constant
-        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body", None)
+        assert stmt_sequence.children()[0].children()[0].root.args == (
+            "__quiche__body",
+            None,
+        )
 
     # Verify RHS type
     assert isinstance(rule.rhs, ASTQuicheTree)
@@ -138,15 +165,29 @@ def test_make_rule2():
     assert len(stmt_sequence.children()) == 1
     assert stmt_sequence.children()[0].value() == ast.Expr
     if version_info[:2] <= (3, 7):
-        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Str, "__quiche__body")
+        assert stmt_sequence.children()[0].children()[0].value() == (
+            "str",
+            ast.Str,
+            "__quiche__body",
+        )
         assert stmt_sequence.children()[0].children()[0].root.kind == "str"
         assert stmt_sequence.children()[0].children()[0].root.constr == ast.Str
-        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body",)
+        assert stmt_sequence.children()[0].children()[0].root.args == (
+            "__quiche__body",
+        )
     elif version_info[:2] >= (3, 8):
-        assert stmt_sequence.children()[0].children()[0].value() == ("str", ast.Constant, "__quiche__body", None)
+        assert stmt_sequence.children()[0].children()[0].value() == (
+            "str",
+            ast.Constant,
+            "__quiche__body",
+            None,
+        )
         assert stmt_sequence.children()[0].children()[0].root.kind == "str"
         assert stmt_sequence.children()[0].children()[0].root.constr == ast.Constant
-        assert stmt_sequence.children()[0].children()[0].root.args == ("__quiche__body", None)
+        assert stmt_sequence.children()[0].children()[0].root.args == (
+            "__quiche__body",
+            None,
+        )
 
 
 def test_ematch_rule1():

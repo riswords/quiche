@@ -33,8 +33,11 @@ class CostModel(ABC):
 class CostExtractor(ABC):
     @abstractmethod
     def extract(
-        self, cost_model: CostModel, egraph: EGraph, result: EClassID,
-        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree]
+        self,
+        cost_model: CostModel,
+        egraph: EGraph,
+        result: EClassID,
+        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree],
     ) -> QuicheTree:
         """
         Extract the QuicheTree for the "best" ENode from the  EGraph,
@@ -50,8 +53,11 @@ class CostExtractor(ABC):
 
 class MinimumCostExtractor(CostExtractor):
     def extract(
-        self, cost_model: CostModel, egraph: EGraph, result: EClassID,
-        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree]
+        self,
+        cost_model: CostModel,
+        egraph: EGraph,
+        result: EClassID,
+        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree],
     ) -> QuicheTree:
         """
         Extract lowest cost ENode from EGraph.
@@ -84,8 +90,10 @@ class MinimumCostExtractor(CostExtractor):
         return self._extract_tree(result, costs, build_tree)
 
     def _extract_tree(
-        self, eclassid: EClassID, costs: Dict[EClassID, Tuple[int, ENode]],
-        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree]
+        self,
+        eclassid: EClassID,
+        costs: Dict[EClassID, Tuple[int, ENode]],
+        build_tree: Callable[[Any, Tuple[Any, ...]], QuicheTree],
     ) -> QuicheTree:
         """
         Build QuicheTree from a dictionary of costs and EClassIDs.
@@ -95,4 +103,7 @@ class MinimumCostExtractor(CostExtractor):
         :returns: QuicheTree corresponding to the best cost ENode
         """
         enode = costs[eclassid][1]
-        return build_tree(enode.key, tuple(self._extract_tree(eid, costs, build_tree) for eid in enode.args))
+        return build_tree(
+            enode.key,
+            tuple(self._extract_tree(eid, costs, build_tree) for eid in enode.args),
+        )

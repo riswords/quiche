@@ -1,5 +1,14 @@
 from typing import List, Optional, Tuple
-from ast import AST, Expr, NodeTransformer, Str, Name, fix_missing_locations, Constant, parse
+from ast import (
+    AST,
+    Expr,
+    NodeTransformer,
+    Str,
+    Name,
+    fix_missing_locations,
+    Constant,
+    parse,
+)
 
 from astor import parse_file, to_source
 
@@ -21,7 +30,9 @@ class ASTQuicheTree(QuicheTree):
         if src_file is not None:
             self.from_file(src_file)
             if root is not None:
-                print("WARNING [ASTQuicheTree]: source file and AST are both specified. Ignoring AST.")
+                print(
+                    "WARNING [ASTQuicheTree]: source file and AST are both specified. Ignoring AST."
+                )
         elif root is not None:
             self.from_ast(root)
 
@@ -140,6 +151,7 @@ class ASTQuicheTree(QuicheTree):
     @staticmethod
     def make_invertible_rules(lhs, rhs):
         from quiche.rewrite import Rule
+
         rule_left = ASTQuicheTree.make_rule(lhs, rhs)
         rule_right = Rule(rule_left.rhs, rule_left.lhs)
         return [rule_left, rule_right]
@@ -147,6 +159,7 @@ class ASTQuicheTree(QuicheTree):
     @staticmethod
     def make_conditional_rule(lhs, rhs, checker):
         from quiche.rewrite import ConditionalRule
+
         base_rule = ASTQuicheTree.make_rule(lhs, rhs)
         return ConditionalRule(base_rule.lhs, base_rule.rhs, checker)
 
