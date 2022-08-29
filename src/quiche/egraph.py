@@ -1,8 +1,7 @@
-from typing import NamedTuple, Tuple, Dict, List, Any, TypeVar, Generic
-from abc import ABC
+from typing import NamedTuple, Sequence, Tuple, Dict, List, Any, TypeVar, Generic
+from abc import ABC, abstractmethod
 
 from .quiche_tree import QuicheTree
-from .rewrite import Rule
 
 
 class EClassID:
@@ -114,6 +113,10 @@ class EClassAnalysis(ABC, Generic[D]):
         pass
 
 
+Subst = Dict[str, EClassID]  # type alias
+EMatch = Tuple[EClassID, Subst]
+
+
 class EGraph:
     def __init__(self, tree: QuicheTree = None, analysis: EClassAnalysis = None):
         self.id_counter = 0
@@ -205,27 +208,26 @@ class EGraph:
     def is_saturated(self):
         return self._is_saturated
 
-    def ematch(self, pattern: QuicheTree, eclasses: Dict[EClassID, List[ENode]]):
-        Env = Dict[str, EClassID]  # type alias
+    def ematch(self, pattern: QuicheTree, eclasses: Dict[EClassID, List[ENode]]) -> List[Tuple[EClassID, Subst]]:
         """
         :param pattern: QuicheTree
         :param eclasses: Dict[EClassID, List[ENode]]
-        :returns: List[Tuple[EClassID, Env]]
+        :returns: List[Tuple[EClassID, Subst]]
         """
 
         def match_in(
-            p: QuicheTree, eid: EClassID, envs: List[Env]
-        ) -> Tuple[bool, List[Env]]:
+            p: QuicheTree, eid: EClassID, envs: List[Subst]
+        ) -> Tuple[bool, List[Subst]]:
             """
             :param p: QuicheTree
             :param eid: EClassID
-            :param envs: List[Env]
-            :returns: Tuple[bool, List[Env]]
+            :param envs: List[Subst]
+            :returns: Tuple[bool, List[Subst]]
             """
 
-            def enode_matches(p: QuicheTree, e: ENode, envs: List[Env]):
+            def enode_matches(p: QuicheTree, e: ENode, envs: List[Subst]):
                 """
-                :returns: Tuple[Bool, List[Env]]
+                :returns: Tuple[Bool, List[Subst]]
                 """
                 if e.key != p.value():
                     return False, envs
@@ -241,12 +243,12 @@ class EGraph:
 
                 return matched, matched_envs
 
-            def enode_matches_in_env(p: QuicheTree, e: ENode, env: Env):
+            def enode_matches_in_env(p: QuicheTree, e: ENode, env: Subst):
                 """
                 :param p: QuicheTree
                 :param e: ENode
-                :param env: Env
-                :returns: Tuple[Bool, List[Env]]
+                :param env: Subst
+                :returns: Tuple[Bool, List[Subst]]
                 """
                 if e.key != p.value():
                     return False, [env]
@@ -280,7 +282,7 @@ class EGraph:
                 matched = False
                 matched_envs = []
                 # does one of the ways to define this class match the pattern?
-                for enode in eclasses[eid]:
+                for enode in eclasses[eid.find()]:
                     for env in envs:
                         matches, new_envs = enode_matches(p, enode, [env])
                         if matches:
@@ -294,6 +296,17 @@ class EGraph:
             if match:
                 matches.extend([(eid, env) for env in envs])
         return matches
+
+    def env_lookup(self, env: Subst, key: str):
+        """Look up key in the env substition
+        """
+        import ast
+        # TODO: This probably shouldn't go on EGraph. Need to re-work
+        for k in env.keys():
+            if len(k) >= 4:
+                if k[0] == "name" and k[1] is ast.Name and k[2] == key and type(k[3]) is ast.Load:
+                    return env[k]
+        return None
 
     def _new_singleton_eclass(self):
         singleton = EClassID(self.id_counter)
@@ -391,7 +404,12 @@ class EGraph:
         Repair the EClassID `eclassid` by canonicalizing all nodes in the
         uses list.
         """
-        assert eclassid.parent is None
+        # If this happens, it probably means that `eclassid` was marked
+        # for repair and then merged into another e-class. If that happens,
+        # just don't worry about `eclassid` because it will be repaired
+        # later (I think- unless I'm wrong, and we do need to repair...)
+        if eclassid.parent is not None:
+            return
 
         # reset uses of eclassid, repopulate at the end
         uses, eclassid.uses = eclassid.uses, []
@@ -425,28 +443,18 @@ class EGraph:
                     eclass.data = new_data
                     self.worklist.append(eclass)
 
-    def apply_rules(self, rules: List[Rule]):
-        """
-        :param rules: List[Rule]
-        :returns: EGraph
-        """
-        canonical_eclasses = self.eclasses()
-        changed = False
+    def search(self, searcher: "EGraphSearcher") -> Sequence[EMatch]:
+        return searcher.search(self)
 
-        matches = []
-        for rule in rules:
-            for eid, env in self.ematch(rule.lhs, canonical_eclasses):
-                matches.append((rule, eid, env))
-        # print(f"VERSION {self.version}")
-        for rule, eid, env in matches:
-            new_eid = self.subst(rule.rhs, env)
+    def apply_rewrite(self, rewriter: "EGraphRewriter", matches: Sequence[EMatch]):
+        # DOESN'T RESTORE INVARIANTS: MUST CALL REBUILD AFTERWARD
+        changed = False
+        for eid, env in matches:
+            new_eid = rewriter.apply_to_eclass(self, eid, env)
             if eid is not new_eid:
-                # print(f"{eid} MATCHED {rule} with {env}")
                 changed = True
             self.merge(eid, new_eid)
-        self.rebuild()
-        self._is_saturated = not changed
-        return self
+        return changed
 
     def extract_best(self):
         pass
@@ -484,17 +492,14 @@ class EGraph:
                 result.append(enode)
         return result
 
-    def subst(self, pattern: QuicheTree, env: Dict[str, EClassID]):
-        """
-        :param pattern: QuicheTree
-        :param env: Dict[str, EClassID]
-        :returns: EClassID
-        """
-        if pattern.is_pattern_symbol():
-            return env[pattern.value()]
-        else:
-            enode = ENode(
-                pattern.value(),
-                tuple(self.subst(child, env) for child in pattern.children()),
-            )
-            return self.add_enode(enode)
+
+class EGraphRewriter(ABC):
+    @abstractmethod
+    def apply_to_eclass(self, egraph: EGraph, eid: EClassID, env: Subst) -> EClassID:
+        pass
+
+
+class EGraphSearcher(ABC):
+    @abstractmethod
+    def search(self, egraph: EGraph) -> Sequence[EMatch]:
+        pass

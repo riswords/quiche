@@ -2,7 +2,7 @@ import ast
 import os
 from sys import version_info
 
-from quiche import EGraph, MinimumCostExtractor
+from quiche import EGraph, MinimumCostExtractor, Rule
 from quiche.pyast import ASTQuicheTree, ASTSizeCostModel, ASTHeuristicCostModel, ASTConstantFolding
 from quiche.pyast.pal import StmtBlock as PALStmtBlock
 
@@ -182,7 +182,7 @@ def test_apply_rule1():
     rule = make_rule_1()
 
     assert not actual.is_saturated()
-    actual.apply_rules([rule])
+    Rule.apply_rules([rule], actual)
     if version_info[:2] <= (3, 7):
         assert actual.version == 145
     else:
@@ -212,7 +212,7 @@ def test_extract_rule1():
     eg = EGraph(quiche_tree)
     rule = make_rule_1()
     assert not eg.is_saturated()
-    eg.apply_rules([rule])
+    Rule.apply_rules([rule], eg)
     if version_info[:2] <= (3, 7):
         assert eg.version == 145
     else:
@@ -274,5 +274,11 @@ def test_constant_folding():
         elif idx == 69:
             assert pre == "    y = x - (3 - 2)"
             assert res == "    y = x - 1"
+        elif idx == 79:
+            assert pre == "    y = 5 * 4 * 3 * x * 0"
+            assert res == "    y = 60 * x * 0"
+        elif idx == 84:
+            assert pre == "    y = 4 / 4"
+            assert res == "    y = 1"
         else:
             assert res == pre, "Line {}: {} != {}".format(idx, res, pre)

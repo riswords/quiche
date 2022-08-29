@@ -1,5 +1,4 @@
-from quiche.egraph import EGraph
-from quiche.analysis import MinimumCostExtractor
+from quiche import EGraph, MinimumCostExtractor, Rule
 
 from .util import verify_egraph_shape  # , print_egraph
 from .expr_lang import ExprNode, ExprNodeCost, ExprTree
@@ -115,7 +114,7 @@ def test_expr_subst():
     rule = ExprTree.make_rule(lambda x, y, z: ((x * y) / z, x * (y / z)))
     matches = actual.ematch(rule.lhs, actual.eclasses())
     lhs, env = matches[0]
-    rhs = actual.subst(rule.rhs, env)
+    rhs = rule._subst(actual, rule.rhs, env)
 
     assert str(lhs) == "e3"
     assert str(rhs) == "e7"
@@ -147,7 +146,7 @@ def test_apply_rules():
     versions = [4, 10, 11, 12]
     for version in versions:
         assert actual.version == version
-        actual.apply_rules(rules)
+        Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
     expected = {
         "e0": {"a": [()], "/": [("e2", "e1")], "*": [("e0", "e4")]},
@@ -181,7 +180,7 @@ def test_extract():
         cost_analysis = MinimumCostExtractor()
         extracted = cost_analysis.extract(cost_model, actual, root.find(), ExprTree.make_node)
         assert str(extracted) == term
-        actual.apply_rules(rules)
+        Rule.apply_rules(rules, actual)
     assert actual.version == versions[-1]
     assert str(cost_analysis.extract(cost_model, actual, root.find(), ExprTree.make_node)) == best_terms[-1]
     expected = {
@@ -202,7 +201,7 @@ def run_test():
     while True:
         version = eg.version
         print("BEST: ", cost_analysis.extract(cost_model, eg, root, ExprTree.make_node))
-        eg.apply_rules(rules)
+        Rule.apply_rules(rules, eg)
         if version == eg.version:
             break
 

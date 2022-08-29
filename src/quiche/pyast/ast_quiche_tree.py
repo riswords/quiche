@@ -1,5 +1,5 @@
 from typing import List, Optional, Tuple
-from ast import AST, Expr, Str, Name, fix_missing_locations, Constant, parse
+from ast import AST, Expr, NodeTransformer, Str, Name, fix_missing_locations, Constant, parse
 
 from astor import parse_file, to_source
 
@@ -39,6 +39,9 @@ class ASTQuicheTree(QuicheTree):
 
     def from_file(self, filename) -> None:
         self.from_ast(ASTQuicheTree.parse_file(filename))
+
+    def from_string(self, source: str) -> None:
+        self.from_ast(ASTQuicheTree.parse_string(source))
 
     def from_ast(self, tree: AST) -> None:
         self.root = tree
@@ -101,23 +104,51 @@ class ASTQuicheTree(QuicheTree):
         return node_type is PALLeaf
 
     @staticmethod
-    def make_rule(lhs, rhs):
+    def lift_to_quiche_tree(code: str, lifter: NodeTransformer = None):
         from ast import parse, fix_missing_locations
+
+        code_ast = parse(code, mode="single").body[0]
+        if isinstance(code_ast, Expr):
+            code_ast = code_ast.value
+        if not lifter:
+            lifter = PALLift().make_lifter()
+        code_ast2 = fix_missing_locations(lifter.visit(code_ast))
+        return ASTQuicheTree(root=code_ast2)
+
+    @staticmethod
+    def make_rule(lhs, rhs):
         from quiche.rewrite import Rule
 
         # assumes LHS and RHS are single expressions or statements
-        lhs_ast = parse(lhs, mode="single").body[0]
-        rhs_ast = parse(rhs, mode="single").body[0]
-        if isinstance(lhs_ast, Expr):
-            lhs_ast = lhs_ast.value
-        if isinstance(rhs_ast, Expr):
-            rhs_ast = rhs_ast.value
         lifter = PALLift().make_lifter()
-        lhs_ast2 = fix_missing_locations(lifter.visit(lhs_ast))
-        rhs_ast2 = fix_missing_locations(lifter.visit(rhs_ast))
-        lhs_qt = ASTQuicheTree(root=lhs_ast2)
-        rhs_qt = ASTQuicheTree(root=rhs_ast2)
+        lhs_qt = ASTQuicheTree.lift_to_quiche_tree(lhs, lifter)
+        rhs_qt = ASTQuicheTree.lift_to_quiche_tree(rhs, lifter)
         return Rule(lhs_qt, rhs_qt)
+        # lhs_ast = parse(lhs, mode="single").body[0]
+        # rhs_ast = parse(rhs, mode="single").body[0]
+        # if isinstance(lhs_ast, Expr):
+        #     lhs_ast = lhs_ast.value
+        # if isinstance(rhs_ast, Expr):
+        #     rhs_ast = rhs_ast.value
+        # lifter = PALLift().make_lifter()
+        # lhs_ast2 = fix_missing_locations(lifter.visit(lhs_ast))
+        # rhs_ast2 = fix_missing_locations(lifter.visit(rhs_ast))
+        # lhs_qt = ASTQuicheTree(root=lhs_ast2)
+        # rhs_qt = ASTQuicheTree(root=rhs_ast2)
+        # return Rule(lhs_qt, rhs_qt)
+
+    @staticmethod
+    def make_invertible_rules(lhs, rhs):
+        from quiche.rewrite import Rule
+        rule_left = ASTQuicheTree.make_rule(lhs, rhs)
+        rule_right = Rule(rule_left.rhs, rule_left.lhs)
+        return [rule_left, rule_right]
+
+    @staticmethod
+    def make_conditional_rule(lhs, rhs, checker):
+        from quiche.rewrite import ConditionalRule
+        base_rule = ASTQuicheTree.make_rule(lhs, rhs)
+        return ConditionalRule(base_rule.lhs, base_rule.rhs, checker)
 
     @staticmethod
     # TODO: This is kind of a mess - we should definitely clean this up...

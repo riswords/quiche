@@ -69,3 +69,33 @@ def test_assign_4(x: int):
 def test_assign_5(x: int):
     y = x - (3 - 2)
     return y
+
+
+def test_mul_zero_1(x: int):
+    y = x * 0
+    return y
+
+
+def test_mul_zero_2(x: int):
+    y = 5 * 4 * 3 * x * 0
+    return y
+
+
+def test_div_self(x: int):
+    y = 4 / 4
+    return y
+
+
+def test_eggsample(x: int):
+    y = x * 2 / 2
+    return y
+
+
+def test_div_0_1():
+    y = 0 / 0
+    return y
+
+
+def test_div_0_2(x: int):
+    y = x * 0 / 0
+    return y
