@@ -297,6 +297,17 @@ class EGraph:
                 matches.extend([(eid, env) for env in envs])
         return matches
 
+    def env_lookup(self, env: Subst, key: str):
+        """Look up key in the env substition
+        """
+        import ast
+        # TODO: This probably shouldn't go on EGraph. Need to re-work
+        for k in env.keys():
+            if len(k) >= 4:
+                if k[0] == "name" and k[1] is ast.Name and k[2] == key and type(k[3]) is ast.Load:
+                    return env[k]
+        return None
+
     def _new_singleton_eclass(self):
         singleton = EClassID(self.id_counter)
         self.id_counter += 1
@@ -432,10 +443,6 @@ class EGraph:
                     eclass.data = new_data
                     self.worklist.append(eclass)
 
-    # def search(self, pattern: QuicheTree) -> Sequence[EMatch]:
-    #     canonical_eclasses = self.eclasses()
-    #     return self.ematch(pattern, canonical_eclasses)
-
     def search(self, searcher: "EGraphSearcher") -> Sequence[EMatch]:
         return searcher.search(self)
 
@@ -448,30 +455,6 @@ class EGraph:
                 changed = True
             self.merge(eid, new_eid)
         return changed
-
-    # def apply_rules(self, rules: List[rewrite.Rule]):
-    #     """
-    #     :param rules: List[Rule]
-    #     :returns: EGraph
-    #     """
-    #     canonical_eclasses = self.eclasses()
-    #     changed = False
-
-    #     matches = []
-    #     for rule in rules:
-    #         for eid, env in self.ematch(rule.lhs, canonical_eclasses):
-    #             matches.append((rule, eid, env))
-    #     # print(f"VERSION {self.version}")
-    #     for rule, eid, env in matches:
-    #         # new_eid = self.subst(rule.rhs, env)
-    #         new_eid = rule.apply_rule(self, eid, env)
-    #         if eid is not new_eid:
-    #             # print(f"{eid} MATCHED {rule} with {env}")
-    #             changed = True
-    #         self.merge(eid, new_eid)
-    #     self.rebuild()
-    #     self._is_saturated = not changed
-    #     return self
 
     def extract_best(self):
         pass
@@ -509,29 +492,11 @@ class EGraph:
                 result.append(enode)
         return result
 
-    # def subst(self, pattern: QuicheTree, env: Dict[str, EClassID]):
-    #     """
-    #     :param pattern: QuicheTree
-    #     :param env: Dict[str, EClassID]
-    #     :returns: EClassID
-    #     """
-    #     if pattern.is_pattern_symbol():
-    #         return env[pattern.value()]
-    #     else:
-    #         enode = ENode(
-    #             pattern.value(),
-    #             tuple(self.subst(child, env) for child in pattern.children()),
-    #         )
-    #         return self.add_enode(enode)
-
 
 class EGraphRewriter(ABC):
     @abstractmethod
     def apply_to_eclass(self, egraph: EGraph, eid: EClassID, env: Subst) -> EClassID:
         pass
-
-    # def apply(self, egraph: EGraph, eid_matches: Sequence[Tuple[EClassID, Subst]]) -> Sequence[EClassID]:
-    #     pass
 
 
 class EGraphSearcher(ABC):

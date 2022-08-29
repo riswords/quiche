@@ -274,5 +274,11 @@ def test_constant_folding():
         elif idx == 69:
             assert pre == "    y = x - (3 - 2)"
             assert res == "    y = x - 1"
+        elif idx == 79:
+            assert pre == "    y = 5 * 4 * 3 * x * 0"
+            assert res == "    y = 60 * x * 0"
+        elif idx == 84:
+            assert pre == "    y = 4 / 4"
+            assert res == "    y = 1"
         else:
             assert res == pre, "Line {}: {} != {}".format(idx, res, pre)

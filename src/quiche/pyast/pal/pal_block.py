@@ -47,7 +47,7 @@ class PALLift:
     def __init__(self, lifter: Optional[NodeTransformer] = None):
         self.lifter = lifter
 
-    def make_lifter(self):
+    def make_lifter(self) -> NodeTransformer:
         if self.lifter is None:
             ver_tup = version_info[:2]
             print("PYTHON VERSION: ", ver_tup)
