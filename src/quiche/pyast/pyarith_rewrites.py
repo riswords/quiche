@@ -1,7 +1,6 @@
-from ast import Constant
+from ast import Constant, Num
 
 from quiche.pyast import ASTQuicheTree
-
 
 # X * 0 = 0
 mul_zero_rule = ASTQuicheTree.make_rule(
@@ -20,7 +19,7 @@ div_self_rule = ASTQuicheTree.make_conditional_rule(
     "__quiche__x / __quiche__x",
     "1",
     lambda eg, eid, env:
-        not any([(not enode.args) and enode.key in [("int", Constant, 0, None)] for enode in eg.lookup_eclass(eg.env_lookup(env, "__quiche__x"))])
+        not any([(not enode.args) and enode.key in [("int", Constant, 0, None), ("int", Num, 0)] for enode in eg.lookup_eclass(eg.env_lookup(env, "__quiche__x"))])
 )
 
 # X * 1 = X
