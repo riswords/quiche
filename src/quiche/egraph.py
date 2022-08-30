@@ -216,93 +216,65 @@ class EGraph:
 
     def ematch(
         self, pattern: QuicheTree, eclasses: Dict[EClassID, List[ENode]]
-    ) -> List[Tuple[EClassID, Subst]]:
+    ) -> List[EMatch]:
+        """ Implementation of e-matching. Check if a pattern matches any of the
+        specified e-classes.
+
+        Args:
+            pattern (QuicheTree): QuicheTree pattern to match against
+            eclasses (Dict[EClassID, List[ENode]]): mapping from e-class IDs to their e-nodes
+
+        Returns:
+            List[EMatch]: a list of 2-tuples (e-class ID, substitution) indicating the e-class
+            ID that matched the root of the pattern and a substitution mapping pattern symbols
+            to e-class IDs. NOTE: The list of e-matches may include multiple entries with the
+            same e-class ID if there are multiple matching substitutions.
         """
-        :param pattern: QuicheTree
-        :param eclasses: Dict[EClassID, List[ENode]]
-        :returns: List[Tuple[EClassID, Subst]]
-        """
-
-        def match_in(
-            p: QuicheTree, eid: EClassID, envs: List[Subst]
-        ) -> Tuple[bool, List[Subst]]:
-            """
-            :param p: QuicheTree
-            :param eid: EClassID
-            :param envs: List[Subst]
-            :returns: Tuple[bool, List[Subst]]
-            """
-
-            def enode_matches(p: QuicheTree, e: ENode, envs: List[Subst]):
-                """
-                :returns: Tuple[Bool, List[Subst]]
-                """
-                if e.key != p.value():
-                    return False, envs
-                    # return False, []
-
-                matched = False
-                matched_envs = []
-                for env in envs:
-                    matched_env, new_envs = enode_matches_in_env(p, e, env)
-                    if matched_env:
-                        matched = True
-                        matched_envs.extend(new_envs)
-
-                return matched, matched_envs
-
-            def enode_matches_in_env(p: QuicheTree, e: ENode, env: Subst):
-                """
-                :param p: QuicheTree
-                :param e: ENode
-                :param env: Subst
-                :returns: Tuple[Bool, List[Subst]]
-                """
-                if e.key != p.value():
-                    return False, [env]
-
-                new_envs = [env]
-                for arg_pattern, arg_eid in zip(p.children(), e.args):
-                    matched, new_envs = match_in(arg_pattern, arg_eid, new_envs)
-                    if not matched:
-                        return False, [env]
-                return True, new_envs
-
-            if p.is_pattern_symbol():
-                # this is a leaf variable like ?x: match it with the env
-                id = p.value()
-                matched = False
-                matched_envs = []
-                for env in envs:
-                    if id not in env:
-                        # create a copy of the env, keeping references to eclassids
-                        env = {**env}  # expensive, but can be optimized (?)
-                        env[id] = eid
-                        matched = True
-                        matched_envs.append(env)
-                    else:
-                        # check that this value matches the same thing (?)
-                        if env[id] is eid:
-                            matched = True
-                            matched_envs.append(env)
-                return matched, matched_envs
+        def enode_matches(pattern: QuicheTree, enode: ENode, envs: List[Subst]) -> List[Subst]:
+            """ Check if the pattern matches the e-node under any specified substitutions."""
+            # e-node key doesn't match or e-node has wrong number of children
+            if pattern.value() != enode.key or len(pattern.children()) != len(enode.args):
+                return []
+            # no pattern children: all envs are good
+            elif not pattern.children():
+                return envs
+            # e-node matches and has the same number of children as the pattern
             else:
-                matched = False
-                matched_envs = []
-                # does one of the ways to define this class match the pattern?
-                for enode in eclasses[eid.find()]:
-                    for env in envs:
-                        matches, new_envs = enode_matches(p, enode, [env])
-                        if matches:
-                            matched = True
-                            matched_envs.extend(new_envs)
-                return matched, matched_envs
+                new_envs = envs
+                # for each child, check if the e-class matches the pattern,
+                # threading the new set of matching substitutions through
+                for pat_child, enode_child in zip(pattern.children(), enode.args):
+                    new_envs = match_in_eclass(pat_child, enode_child, new_envs)
+                    if not new_envs:
+                        return []
+                return new_envs
 
-        matches = []
+        def match_in_eclass(pattern: QuicheTree, eid: EClassID, envs: List[Subst]) -> List[Subst]:
+            """Check if pattern matches the e-class under any specified substitutions."""
+            matched_envs: List[Subst] = []
+            # the root of the pattern is a symbol: in each environment, we either
+            # 1. bind it to this e-class ID if the symbol isn't bound; or
+            # 2. verify that the symbol was previously bound to this e-class ID
+            if pattern.is_pattern_symbol():
+                val = pattern.value()
+                for env in envs:
+                    if val not in env:
+                        # (inefficiently) copy the environment because other e-classes might also match
+                        new_env = {**env}
+                        new_env[val] = eid
+                        matched_envs.append(new_env)
+                    elif env[val] is eid:
+                        matched_envs.append(env)
+            else:
+                # Not a pattern symbol: check if any e-nodes match
+                for enode in eclasses[eid.find()]:
+                    matched_envs.extend(enode_matches(pattern, enode, envs))
+            return matched_envs
+
+        matches: List[EMatch] = []
         for eid in eclasses.keys():
-            match, envs = match_in(pattern, eid, [{}])
-            if match:
-                matches.extend([(eid, env) for env in envs])
+            eclass_matches = match_in_eclass(pattern, eid, [{}])
+            matches.extend([(eid, env) for env in eclass_matches])
         return matches
 
     def env_lookup(self, env: Subst, key: str):
@@ -470,9 +442,6 @@ class EGraph:
                 changed = True
             self.merge(eid, new_eid)
         return changed
-
-    def extract_best(self):
-        pass
 
     def eclasses(self):
         """
