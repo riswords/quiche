@@ -3,10 +3,16 @@ Quiche is a python implementation of egraphs based on
 [egraphs-good (egg)](https://egraphs-good.github.io/).
 
 For usage examples, check out the demo code in `demo/egraphs_demo.py`,
-as well as the `tests` directory: `test_asts.py`, `test_egraph.py`, and
-`prop_test.py`!
+as well as the `tests` directory: `test_asts.py`, `test_expr.py`, and
+`test_prop.py`!
 
 Additional documentation coming soon!
+
+Until then, my slides from the 2022 PLDI EGRAPHS workshop are available in this repo
+([EGRAPHS22.pdf](https://github.com/riswords/quiche/blob/main/EGRAPHS22.pdf)), and
+the recording of that talk is available on YouTube
+[here](https://www.youtube.com/watch?v=dbgZJyw3hnk&t=8690s) (along with the other
+amazing talks from the EGRAPHS '22 workshop).
 
 
 ## Installation:
@@ -55,6 +61,10 @@ To run the tests (from the top-level `quiche` directory):
 
 Questions, issues, or requests? Please file an issue on this repo!
 
-Want to chat? Join the Quiche Slack channel!
+Want to chat about Quiche? Join the Slack channel!
 
 https://join.slack.com/t/quiche-group/shared_invite/zt-1ow1puw1t-gar3wVzBJl60olXC~AjLTA
+
+If you're interested in e-graphs more generally, check out the e-graphs Zulip!
+
+https://egraphs.zulipchat.com/
