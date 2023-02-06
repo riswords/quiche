@@ -57,4 +57,4 @@ Questions, issues, or requests? Please file an issue on this repo!
 
 Want to chat? Join the Quiche Slack channel!
 
-https://join.slack.com/t/quiche-group/shared_invite/zt-1d7atd2pf-8s8xGIBfH1CNunACgNLxXw
+https://join.slack.com/t/quiche-group/shared_invite/zt-1ow1puw1t-gar3wVzBJl60olXC~AjLTA
