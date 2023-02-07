@@ -80,7 +80,7 @@ class PALLift:
     def make_lifter(self) -> NodeTransformer:
         if self.lifter is None:
             ver_tup = version_info[:2]
-            print("PYTHON VERSION: ", ver_tup)
+            # print("PYTHON VERSION: ", ver_tup)
             if ver_tup == (3, 7):
                 from .pal_lift_37 import PALLift37
 
