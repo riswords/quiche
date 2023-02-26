@@ -370,7 +370,7 @@ class EGraph:
         # Update analysis
         if self.analysis:
             data1, data2 = e1.data, e2.data
-            e2.data = self.analysis.join(data1, data2)
+            new_id.data = self.analysis.join(data1, data2)
 
         return new_id
 
