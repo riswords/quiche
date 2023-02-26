@@ -1,13 +1,7 @@
 from quiche import EGraph, MinimumCostExtractor, Rule
+from quiche.lang.expr_lang import ExprNode, ExprNodeCost, ExprTree
 
 from .util import verify_egraph_shape  # , print_egraph
-from .expr_lang import ExprNode, ExprNodeCost, ExprTree
-
-
-def exp(fn):
-    c = fn.__code__
-    args = [ExprNode(c.co_varnames[i], ()) for i in range(c.co_argcount)]
-    return fn(*args)
 
 
 def make_rules():
@@ -23,15 +17,18 @@ def make_rules():
 
 
 def times_divide():
-    return exp(lambda a: (a * 2) / 2)
+    # return ExprNode.exp(lambda a: (a * 2) / 2)
+    return (ExprNode('a', ()) * 2) / 2
 
 
 def shift():
-    return exp(lambda a: a << 1)
+    # return ExprNode.exp(lambda a: a << 1)
+    return ExprNode('a', ()) << 1
 
 
 def times2():
-    return exp(lambda a: a * 2)
+    # return ExprNode.exp(lambda a: a * 2)
+    return ExprNode('a', ()) * 2
 
 
 def test_add_times_divide():

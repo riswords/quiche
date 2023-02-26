@@ -1,6 +1,6 @@
 from quiche import EGraph, MinimumCostExtractor, Rule
 
-from .prop_parser import PropParser, PropTree, PropTreeCost
+from quiche.lang.prop_parser import PropParser, PropTree, PropTreeCost
 
 from .util import verify_egraph_shape  # , print_egraph
 

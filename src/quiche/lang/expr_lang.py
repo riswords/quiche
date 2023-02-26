@@ -20,11 +20,17 @@ class ExprNode(NamedTuple):
     def __add__(self, other):
         return ExprNode._mk_op("+")(self, other)
 
+    def __sub__(self, other):
+        return ExprNode._mk_op("-")(self, other)
+
     def __mul__(self, other):
         return ExprNode._mk_op("*")(self, other)
 
     def __lshift__(self, other):
         return ExprNode._mk_op("<<")(self, other)
+
+    def __rshift__(self, other):
+        return ExprNode._mk_op(">>")(self, other)
 
     def __truediv__(self, other):
         return ExprNode._mk_op("/")(self, other)
@@ -77,16 +83,18 @@ class ExprTree(QuicheTree):
 class ExprNodeCost(CostModel):
     """
     Simple cost model for ExprNodes:
-
-    +, << cost 1
+    +, -, <<, >> cost 1
     * costs 2
     / costs 3
+    everything else costs 0
     """
 
     def __init__(self):
         self.expr_costs = {
             "+": 1,
+            "-": 1,
             "<<": 1,
+            ">>": 1,
             "*": 2,
             "/": 3,
         }
@@ -95,14 +103,7 @@ class ExprNodeCost(CostModel):
         """
         Calculate the cost of a node based solely on its key (not its children)
         """
-        if node.key == "+" or node.key == "<<":
-            return 1
-        elif node.key == "*":
-            return 2
-        elif node.key == "/":
-            return 3
-        else:
-            return 0
+        return self.expr_costs.get(node.key, 0)
 
     def enode_cost_rec(
         self, enode: ENode, costs: Dict[EClassID, Tuple[int, ENode]]
