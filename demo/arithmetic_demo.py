@@ -4,13 +4,13 @@ from quiche.lang.expr_lang import ExprNode, ExprNodeCost, ExprTree
 from quiche.lang.expr_constant_folding import ExprConstantFolding
 
 
-def egraph_intro_slide():
+def egraph_intro_slide_8():
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
     egraph = EGraph(quiche_tree)
 
 
-def egraph_add_shift_term_slide():
+def egraph_add_shift_term_slide_9():
     # setup
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
@@ -21,7 +21,7 @@ def egraph_add_shift_term_slide():
     egraph.add(ExprTree(shift_expr))
 
 
-def eclass_merge_example_slide():
+def eclass_merge_example_slide_11():
     # setup
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
@@ -38,7 +38,7 @@ def eclass_merge_example_slide():
     egraph.rebuild()
 
 
-def ematching_example_slide():
+def ematching_example_slide_15():
     # setup
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
@@ -52,7 +52,7 @@ def ematching_example_slide():
     print(matches)
 
 
-def apply_a_rule_slide():
+def apply_a_rule_slide_16():
     # setup
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
@@ -67,7 +67,7 @@ def apply_a_rule_slide():
     print("Shift e-class.find(): ", shift_eclass.find())
 
 
-def apply_rules_to_eqsat_slide():
+def apply_rules_to_eqsat_slide_22():
     # setup
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
@@ -91,7 +91,7 @@ def apply_rules_to_eqsat_slide():
     # print("root eclass: ", egraph.root.find())
 
 
-def constant_folding_usage_slide():
+def constant_folding_usage_slide_28():
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
     egraph = EGraph(quiche_tree, ExprConstantFolding())
@@ -102,7 +102,7 @@ def constant_folding_usage_slide():
     assert egraph.root.data == 4
 
 
-def term_extraction_example_slide():
+def term_extraction_example_slide_31():
     # setup
     expr = (ExprNode('a', ()) * 2) / 2
     quiche_tree = ExprTree(expr)
@@ -131,15 +131,14 @@ def term_extraction_example_slide():
 
 
 def main():
-    egraph_intro_slide()
-    egraph_add_shift_term_slide()
-    eclass_merge_example_slide()
-    ematching_example_slide()
-    apply_a_rule_slide()
-    apply_rules_to_eqsat_slide()
-    # constant folding impl code from expr_lang
-    constant_folding_usage_slide()
-    term_extraction_example_slide()
+    egraph_intro_slide_8()
+    egraph_add_shift_term_slide_9()
+    eclass_merge_example_slide_11()
+    ematching_example_slide_15()
+    apply_a_rule_slide_16()
+    apply_rules_to_eqsat_slide_22()
+    constant_folding_usage_slide_28()
+    term_extraction_example_slide_31()
 
 
 def test_main():

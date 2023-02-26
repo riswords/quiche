@@ -14,6 +14,11 @@ the recording of that talk is available on YouTube
 [here](https://www.youtube.com/watch?v=dbgZJyw3hnk&t=8690s) (along with the other
 amazing talks from the EGRAPHS '22 workshop).
 
+For a more guided walkthrough of e-graphs and code in Quiche, the slides from my intro to
+e-graphs talk at the Women in Compilers and Tools meetup are available
+[here](https://github.com/riswords/quiche/blob/main/WiCTSlides.pptx). The demo code for those
+slides is in `demo/arithmetic_demo.py`.
+
 
 ## Installation:
 
