@@ -11,10 +11,10 @@ class QuicheTree(ABC):
         pass
 
     @abstractmethod
-    def is_pattern_symbol(self):
+    def is_pattern_symbol(self) -> bool:
         pass
 
-    def matches_enode(self, enode):
+    def matches_enode(self, enode) -> bool:
         if self.value() != enode.key:
             return False
         return True
