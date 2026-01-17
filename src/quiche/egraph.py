@@ -185,6 +185,7 @@ class EGraph:
                         key = enode.key
                     record = [escape(key)]
                     for i, arg in enumerate(enode.args):
+                        arg = arg.find()
                         dest = f"cluster_{arg.id}"
                         # print("DRAWING EDGE TO ", dest)
                         # graph.edge(f'{enode_id}:p{i}', f'refcluster{arg.id}', lhead=dest)
