@@ -26,6 +26,9 @@ class ExprNode(NamedTuple):
     def __mul__(self, other):
         return ExprNode._mk_op("*")(self, other)
 
+    def __pow__(self, other):
+        return ExprNode._mk_op("**")(self, other)
+
     def __lshift__(self, other):
         return ExprNode._mk_op("<<")(self, other)
 
@@ -34,6 +37,9 @@ class ExprNode(NamedTuple):
 
     def __truediv__(self, other):
         return ExprNode._mk_op("/")(self, other)
+
+    def __rtruediv__(self, other):
+        return ExprNode._mk_op("/")(other, self)
 
     # print it out like an s-expr
     def __repr__(self):
